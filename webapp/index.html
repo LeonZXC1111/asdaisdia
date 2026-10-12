@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="ru" data-theme="grey">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Wispie VPN</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="grey"]{--tb-top:rgba(255,255,255,.42);--tb-bot:rgba(255,255,255,.12);--tb-edge:rgba(255,255,255,.7);--pl-top:rgba(255,255,255,.85);--pl-bot:rgba(255,255,255,.3);--pl-edge:rgba(255,255,255,.95);--pl-shadow:rgba(40,50,80,.18);
+  --bg-base:#c9cfd9;
+  --bg-grad:radial-gradient(900px 520px at 20% -10%,rgba(255,255,255,.55),transparent 60%),linear-gradient(170deg,#d6dbe4 0%,#c2c9d5 55%,#b5bdca 100%);
+  --ink:#1b2030; --ink2:#4a5366; --ink3:#78819a;
+  --glass:rgba(255,255,255,.2); --edge:rgba(255,255,255,.5);
+  --sheen:linear-gradient(115deg,rgba(255,255,255,.4) 0%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 65%,rgba(255,255,255,.18) 100%);
+  --inset:inset 0 1px 0 rgba(255,255,255,.6);
+  --shadow:0 12px 34px rgba(30,40,70,.16);
+  --shadow-lg:0 16px 40px rgba(30,40,70,.22);
+  --navy:#2f3b57; --btn-a:#2f3b57; --btn-b:#56698f; --btn-ink:#fff;
+  --ghost:rgba(255,255,255,.32); --field:rgba(255,255,255,.3); --chip:rgba(255,255,255,.34);
+  --tabbar:rgba(255,255,255,.18); --pill:rgba(255,255,255,.5);
+  --blob:rgba(93,110,145,.28); --track:rgba(47,59,87,.16);
+  --tag:#2f3b57; --focus:rgba(93,110,145,.2); --toast:rgba(255,255,255,.5);
+  --ok:#2e9c77; --bad:#c0566b;
+}
+[data-theme="white"]{--tb-top:rgba(255,255,255,.6);--tb-bot:rgba(255,255,255,.25);--tb-edge:rgba(255,255,255,.8);--pl-top:rgba(255,255,255,.98);--pl-bot:rgba(255,255,255,.6);--pl-edge:rgba(255,255,255,1);--pl-shadow:rgba(40,50,80,.14);
+  --bg-base:#e4e7ed;
+  --bg-grad:radial-gradient(900px 520px at 85% -10%,rgba(255,255,255,.6),transparent 60%),#e4e7ed;
+  --ink:#1b2030; --ink2:#50596c; --ink3:#838ca2;
+  --glass:rgba(255,255,255,.22); --edge:rgba(255,255,255,.6);
+  --sheen:linear-gradient(115deg,rgba(255,255,255,.35) 0%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 65%,rgba(255,255,255,.15) 100%);
+  --inset:inset 0 1px 0 rgba(255,255,255,.7);
+  --shadow:0 12px 30px rgba(40,50,80,.12);
+  --shadow-lg:0 16px 36px rgba(40,50,80,.18);
+  --navy:#3a4664; --btn-a:#3a4664; --btn-b:#6b7ca0; --btn-ink:#fff;
+  --ghost:rgba(255,255,255,.4); --field:rgba(255,255,255,.4); --chip:rgba(255,255,255,.4);
+  --tabbar:rgba(255,255,255,.2); --pill:rgba(255,255,255,.6);
+  --blob:rgba(107,124,160,.22); --track:rgba(58,70,100,.14);
+  --tag:#3a4664; --focus:rgba(107,124,160,.2); --toast:rgba(255,255,255,.6);
+  --ok:#2e9c77; --bad:#c0566b;
+}
+[data-theme="black"]{--tb-top:rgba(40,44,60,.55);--tb-bot:rgba(12,14,22,.35);--tb-edge:rgba(255,255,255,.14);--pl-top:rgba(255,255,255,.22);--pl-bot:rgba(255,255,255,.05);--pl-edge:rgba(255,255,255,.3);--pl-shadow:rgba(0,0,0,.5);
+  --bg-base:#06070a;
+  --bg-grad:radial-gradient(800px 500px at 90% -10%,rgba(90,110,170,.12),transparent 60%),#06070a;
+  --ink:#eef1f7; --ink2:#a7afc2; --ink3:#6f7890;
+  --glass:rgba(255,255,255,.04); --edge:rgba(255,255,255,.1);
+  --sheen:linear-gradient(115deg,rgba(255,255,255,.06) 0%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 65%,rgba(255,255,255,.03) 100%);
+  --inset:inset 0 1px 0 rgba(255,255,255,.1);
+  --shadow:0 14px 40px rgba(0,0,0,.5);
+  --shadow-lg:0 18px 44px rgba(0,0,0,.6);
+  --navy:#9fb3e6; --btn-a:#3a4a78; --btn-b:#6480b8; --btn-ink:#fff;
+  --ghost:rgba(255,255,255,.07); --field:rgba(255,255,255,.05); --chip:rgba(255,255,255,.07);
+  --tabbar:rgba(20,22,30,.5); --pill:rgba(255,255,255,.12);
+  --blob:rgba(120,140,200,.18); --track:rgba(255,255,255,.1);
+  --tag:#3a4a78; --focus:rgba(159,179,230,.18); --toast:rgba(20,22,30,.7);
+  --ok:#4fd2a0; --bad:#ff7a94;
+}
+[data-theme="galaxy"]{--tb-top:rgba(90,70,160,.45);--tb-bot:rgba(30,20,70,.35);--tb-edge:rgba(190,170,255,.3);--pl-top:rgba(190,170,255,.45);--pl-bot:rgba(120,90,220,.18);--pl-edge:rgba(220,210,255,.5);--pl-shadow:rgba(70,40,160,.45);
+  --bg-base:#0a0920;
+  --bg-grad:radial-gradient(1000px 600px at 15% 0%,#3b1f6e 0%,transparent 60%),radial-gradient(800px 500px at 100% 100%,#123a6e 0%,transparent 55%),#0a0920;
+  --ink:#f1eeff; --ink2:#b9b1da; --ink3:#857ea9;
+  --glass:rgba(140,120,255,.08); --edge:rgba(170,150,255,.22);
+  --sheen:linear-gradient(115deg,rgba(255,255,255,.1) 0%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 65%,rgba(170,150,255,.08) 100%);
+  --inset:inset 0 1px 0 rgba(255,255,255,.14);
+  --shadow:0 14px 40px rgba(10,5,40,.55);
+  --shadow-lg:0 18px 44px rgba(10,5,40,.65);
+  --navy:#c4b5fd; --btn-a:#6d4fd6; --btn-b:#3b82d6; --btn-ink:#fff;
+  --ghost:rgba(255,255,255,.08); --field:rgba(255,255,255,.06); --chip:rgba(255,255,255,.1);
+  --tabbar:rgba(30,22,70,.4); --pill:rgba(255,255,255,.14);
+  --blob:rgba(167,139,250,.35); --track:rgba(255,255,255,.1);
+  --tag:#6d4fd6; --focus:rgba(167,139,250,.25); --toast:rgba(40,30,80,.7);
+  --ok:#5be0b4; --bad:#ff7a94;
+}
+[data-theme="red"]{--tb-top:rgba(120,30,40,.45);--tb-bot:rgba(40,8,14,.35);--tb-edge:rgba(255,130,140,.25);--pl-top:rgba(255,120,130,.42);--pl-bot:rgba(190,30,45,.22);--pl-edge:rgba(255,170,175,.5);--pl-shadow:rgba(150,10,25,.45);
+  --bg-base:#120508;
+  --bg-grad:radial-gradient(900px 500px at 90% -10%,#4a0d18 0%,transparent 60%),#120508;
+  --ink:#fdecee; --ink2:#d1a0a6; --ink3:#9a6d74;
+  --glass:rgba(255,70,90,.07); --edge:rgba(255,120,130,.2);
+  --sheen:linear-gradient(115deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 65%,rgba(255,120,130,.07) 100%);
+  --inset:inset 0 1px 0 rgba(255,255,255,.12);
+  --shadow:0 14px 40px rgba(0,0,0,.5);
+  --shadow-lg:0 18px 44px rgba(0,0,0,.6);
+  --navy:#ff7b86; --btn-a:#b3202e; --btn-b:#e0474f; --btn-ink:#fff;
+  --ghost:rgba(255,255,255,.07); --field:rgba(255,255,255,.05); --chip:rgba(255,255,255,.08);
+  --tabbar:rgba(40,10,16,.5); --pill:rgba(255,255,255,.12);
+  --blob:rgba(255,80,100,.3); --track:rgba(255,255,255,.1);
+  --tag:#b3202e; --focus:rgba(255,123,134,.22); --toast:rgba(50,12,20,.7);
+  --ok:#5be0b4; --bad:#ff7a94;
+}
+
+:root{--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg-base)}
+html,body{min-height:100%}
+body{font-family:'Manrope',system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg-grad);
+  padding:18px 16px calc(120px + env(safe-area-inset-bottom));overflow-x:hidden}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+#app{position:relative;z-index:1}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+.view>*{animation:rise .55s var(--ease) both}
+.view>*:nth-child(2){animation-delay:.04s}
+.view>*:nth-child(3){animation-delay:.08s}
+.view>*:nth-child(4){animation-delay:.12s}
+@keyframes rise{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
+
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:6px 4px 4px}
+.title{font-size:28px;font-weight:800;letter-spacing:-.025em;margin:0 4px 16px}
+h3{font-size:16px;font-weight:700;margin-bottom:6px}
+.muted{color:var(--ink2);font-size:14px;line-height:1.5}
+.small{font-size:12.5px}
+.center{text-align:center}
+.big{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin:10px 0 6px}
+.between{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.row{display:flex;gap:8px;align-items:center}
+.row input{flex:1;margin:0}
+.row2{display:flex;gap:8px}
+.row2 .btn{margin-top:12px;flex:1}
+
+.glass{position:relative;overflow:hidden;margin-bottom:12px;padding:18px;border-radius:26px;background:var(--glass);
+  border:1px solid var(--edge);backdrop-filter:blur(10px) saturate(160%);-webkit-backdrop-filter:blur(10px) saturate(160%);
+  box-shadow:var(--shadow),var(--inset);transition:transform .4s var(--ease),box-shadow .4s var(--ease)}
+.glass::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:var(--sheen)}
+.glass>*{position:relative;z-index:1}
+.glass.tap{cursor:pointer}
+.glass.tap:active{transform:scale(.982)}
+.hero::before{content:"";position:absolute;width:260px;height:260px;right:-100px;top:-120px;border-radius:50%;
+  background:radial-gradient(circle,var(--blob),transparent 65%);z-index:0}
+
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:99px;background:var(--chip);border:1px solid var(--edge)}
+.chip i{width:7px;height:7px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 4px rgba(192,86,107,.18)}
+.chip.ok i{background:var(--ok);box-shadow:0 0 0 4px rgba(46,156,119,.18)}
+
+.bar{height:8px;border-radius:8px;background:var(--track);overflow:hidden;margin-top:14px}
+.bar span{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--btn-b),var(--btn-a));transition:width .9s var(--ease)}
+
+.btn{display:block;width:100%;margin-top:12px;border:0;border-radius:18px;padding:15px;cursor:pointer;font:800 15px 'Manrope',sans-serif;
+  color:var(--btn-ink);background:linear-gradient(135deg,var(--btn-a),var(--btn-b));box-shadow:0 10px 22px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.22);
+  transition:transform .25s var(--ease),filter .25s}
+.btn:hover{filter:brightness(1.05)}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btn.ghost{color:var(--ink);background:var(--ghost);box-shadow:inset 0 0 0 1px var(--edge),0 6px 16px rgba(0,0,0,.08)}
+.btn.sm{display:inline-block;width:auto;margin-top:0;padding:10px 16px;border-radius:14px;font-size:13px}
+
+input{width:100%;margin:8px 0;padding:13px 14px;border-radius:16px;border:1px solid var(--edge);background:var(--field);
+  font:600 15px 'Manrope',sans-serif;color:var(--ink);outline:none;transition:border-color .25s,box-shadow .25s}
+input::placeholder{color:var(--ink3)}
+input:focus{border-color:var(--navy);box-shadow:0 0 0 4px var(--focus)}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 2px}
+.chipb{border:1px solid var(--edge);background:var(--chip);color:var(--ink);font:700 13px 'Manrope',sans-serif;padding:8px 14px;border-radius:99px;cursor:pointer;transition:transform .2s var(--ease)}
+.chipb.on{background:var(--pill);box-shadow:0 0 0 2px var(--navy) inset}
+.chipb[disabled]{opacity:.4;pointer-events:none}
+.chipb:active{transform:scale(.95)}
+.pick{display:flex;gap:8px;justify-content:center;margin:10px 0}
+.item{padding:12px 4px;border-top:1px solid var(--edge)}
+
+.seg{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;padding:4px;border-radius:18px;background:var(--chip);border:1px solid var(--edge);margin-bottom:12px}
+.seg button{border:0;background:none;padding:10px 4px;border-radius:14px;font:700 13px 'Manrope',sans-serif;color:var(--ink2);cursor:pointer;transition:all .3s var(--ease)}
+.seg button.on{background:var(--pill);color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 4px 12px rgba(0,0,0,.08)}
+
+.plan{display:flex;align-items:center;gap:14px}
+.plan.best{box-shadow:var(--shadow),0 0 0 1.5px var(--navy) inset,var(--inset)}
+.plan-icon{width:52px;height:52px;flex:none;border-radius:18px;display:grid;place-items:center;background:var(--chip);border:1px solid var(--edge);color:var(--navy)}
+.plan-icon .i{width:26px;height:26px}
+.plan-info{flex:1;min-width:0}
+.plan-days{font-size:18px;font-weight:800}
+.plan-buy{text-align:right}
+.price{font-size:18px;font-weight:800;margin-bottom:6px}
+.tag{position:absolute;top:-1px;right:16px;font-size:11px;font-weight:800;letter-spacing:.04em;padding:4px 10px;border-radius:0 0 10px 10px;background:var(--tag);color:#fff}
+
+.shopitem{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.shopitem h3{margin:0 0 2px}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{text-align:center;padding:16px 10px;margin-bottom:12px}
+.stat b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.stat span{font-size:12.5px;color:var(--ink2)}
+
+.pfs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}
+.pf{border:1px solid var(--edge);background:var(--chip);color:var(--ink);font:700 13px 'Manrope',sans-serif;padding:12px;border-radius:16px;cursor:pointer;text-align:left}
+.pf.on{box-shadow:0 0 0 2px var(--navy) inset;background:var(--pill)}
+.qrbox{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+#qr{background:#fff;padding:10px;border-radius:18px}
+#qr img,#qr canvas{display:block}
+.steps-dots{display:flex;gap:6px;justify-content:center;margin:10px 0}
+.steps-dots i{width:8px;height:8px;border-radius:50%;background:var(--track)}
+.steps-dots i.on{background:var(--navy)}
+.stepbox{font-size:15px;line-height:1.5;min-height:72px}
+
+.subseg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:16px;background:var(--chip);border:1px solid var(--edge);margin-bottom:10px}
+.subseg button{border:0;background:none;padding:8px 4px;border-radius:12px;font:700 12.5px 'Manrope',sans-serif;color:var(--ink2);cursor:pointer}
+.subseg button.on{background:var(--pill);color:var(--ink)}
+.res{text-align:center;font-weight:800;min-height:26px;margin:8px 0 2px}
+
+.coinwrap,.slotwrap{display:flex;justify-content:center;align-items:center;height:130px;perspective:600px}
+.coin{width:112px;height:112px;border-radius:50%;background:linear-gradient(135deg,#f7dc86,#c9962e);display:grid;place-items:center;
+  font:800 17px 'Manrope',sans-serif;color:#4a3000;box-shadow:inset 0 2px 6px rgba(255,255,255,.6),0 10px 24px rgba(0,0,0,.25)}
+.coin.spin{animation:flip .9s linear}
+@keyframes flip{from{transform:rotateY(0)}to{transform:rotateY(1440deg)}}
+.wheelwrap{position:relative;display:flex;justify-content:center;height:236px;align-items:center}
+#wheel{width:220px;height:220px;transform:rotate(0deg)}
+.pointer{position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:18px solid var(--navy);z-index:2}
+.slots{display:flex;gap:10px}
+.reel{width:72px;height:88px;border-radius:18px;display:grid;place-items:center;font-size:34px;background:var(--chip);border:1px solid var(--edge)}
+
+.legal{font-size:12px;color:var(--ink3);text-align:center;margin:14px 8px 0;line-height:1.5}
+
+.tabbar{--n:4;position:fixed;left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:5;display:grid;grid-template-columns:repeat(var(--n),1fr);padding:6px;border-radius:30px;background:linear-gradient(180deg,var(--tb-top),var(--tb-bot));border:1px solid var(--tb-edge);backdrop-filter:blur(18px) saturate(190%);-webkit-backdrop-filter:blur(18px) saturate(190%);box-shadow:0 18px 40px rgba(0,0,0,.22),inset 0 1px 1px rgba(255,255,255,.55),inset 0 -1px 1px rgba(0,0,0,.12);overflow:hidden}
+.tabbar::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.35) 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,0) 70%,rgba(255,255,255,.18) 100%)}
+.pill{position:absolute;top:6px;bottom:6px;left:6px;width:calc((100% - 12px) / var(--n));border-radius:24px;background:linear-gradient(180deg,var(--pl-top),var(--pl-bot));border:1px solid var(--pl-edge);box-shadow:0 10px 24px var(--pl-shadow),inset 0 1px 1px rgba(255,255,255,.9),inset 0 -6px 12px rgba(255,255,255,.12);transition:transform .6s cubic-bezier(.34,1.45,.64,1)}
+.tab{position:relative;z-index:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0 8px;color:var(--ink3);font:700 10.5px 'Manrope',sans-serif;cursor:pointer;transition:color .3s}
+.tab .i{transition:transform .45s var(--ease),fill-opacity .3s}
+.tab.on{color:var(--navy)}
+.tab.on .i{fill:currentColor;fill-opacity:.18;transform:translateY(-1px) scale(1.06)}
+.tab:active .i{transform:scale(.88)}
+
+.toast{position:fixed;left:50%;bottom:104px;z-index:9;transform:translateX(-50%);white-space:nowrap;padding:11px 18px;border-radius:99px;
+  font-weight:700;font-size:14px;color:var(--ink);background:var(--toast);border:1px solid var(--edge);box-shadow:var(--shadow-lg);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:toastIn .35s var(--ease) both;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.2 12 3.5l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4v-5.5h-6V20.5H5A1.5 1.5 0 0 1 3.5 19z"/></symbol>
+  <symbol id="i-money" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 10v4M18 10v4"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.3"/><path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 5.9M17.5 14.7c1.9.8 3 2.7 3.3 4.8"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2 19 6v5.6c0 4.3-2.9 7.6-7 9.2-4.1-1.6-7-4.9-7-9.2V6z"/><path d="m9 12.2 2 2 4-4"/></symbol>
+</svg>
+
+<main id="app"></main>
+<nav class="tabbar" id="tabs"></nav>
+
+<script>
+const tg = window.Telegram?.WebApp;
+try { tg?.ready(); tg?.expand(); } catch {}
+const INIT = tg?.initData || "";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- темы ---------- */
+const THEMES = {
+  grey:   { name:"Серая",     swatch:"#c9cfd9", tg:"#c9cfd9", fx:{ mode:"orbs",   count:7,  colors:["255,255,255","140,150,172"] } },
+  white:  { name:"Белая",     swatch:"#f3f4f7", tg:"#e4e7ed", fx:{ mode:"orbs",   count:6,  colors:["255,205,160","160,190,255","255,255,255"] } },
+  black:  { name:"Черная",    swatch:"#101218", tg:"#06070a", fx:{ mode:"stars",  count:40, colors:["230,236,255"] } },
+  galaxy: { name:"Галактика", swatch:"#3b1f6e", tg:"#0a0920", fx:{ mode:"stars",  count:45, colors:["225,215,255","160,230,255","255,235,200"] } },
+  red:    { name:"Красная",   swatch:"#7a1622", tg:"#120508", fx:{ mode:"embers", count:28, colors:["255,120,130","255,190,120"] } },
+};
+let fx = THEMES.grey.fx;
+
+function setTheme(key) {
+  if (!THEMES[key]) return;
+  const t = THEMES[key];
+  document.documentElement.dataset.theme = key;
+  fx = t.fx;
+  resetBg();
+  try { localStorage.setItem("wispie-theme", key); } catch {}
+  try { tg?.setHeaderColor?.(t.tg); tg?.setBackgroundColor?.(t.tg); } catch {}
+  document.querySelectorAll(".swcol").forEach(b => b.classList.toggle("on", b.dataset.theme === key));
+}
+
+function themeCard() {
+  const cur = document.documentElement.dataset.theme || "grey";
+  return `
+    <section class="glass">
+      <h3>Оформление</h3>
+      <div class="swatches" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px">${Object.entries(THEMES).map(([k, t]) => `
+        <button class="swcol ${k === cur ? "on" : ""}" data-theme="${k}" style="display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;color:var(--ink2);font:700 10.5px 'Manrope',sans-serif;cursor:pointer">
+          <span class="sw" style="width:40px;height:40px;border-radius:50%;background:${t.swatch};box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),0 4px 10px rgba(0,0,0,.18)"></span>${t.name}
+        </button>`).join("")}
+      </div>
+    </section>`;
+}
+
+/* ---------- данные ---------- */
+const PLATFORMS = {
+  windows:{name:"Windows", steps:["Скачайте Hiddify с официального сайта или GitHub и установите.","Нажмите «Скопировать ссылку» на этой странице.","В Hiddify нажмите «+» и выберите добавление из буфера обмена.","Выберите профиль и нажмите «Подключить».","Готово, VPN работает."]},
+  ios:{name:"iOS", steps:["Установите Streisand или V2Box из App Store.","Нажмите «Скопировать ссылку» на этой странице.","В приложении добавьте подписку из буфера обмена.","Выберите сервер и включите подключение.","Готово, VPN работает."]},
+  android:{name:"Android", steps:["Установите Hiddify или V2rayNG.","Нажмите «Скопировать ссылку» на этой странице.","В приложении добавьте подписку из буфера обмена.","Выберите сервер и подключитесь.","Готово, VPN работает."]},
+  macos:{name:"macOS", steps:["Установите Hiddify или V2Box.","Нажмите «Скопировать ссылку».","Добавьте подписку из буфера обмена.","Выберите сервер и подключитесь.","Готово, VPN работает."]},
+  linux:{name:"Linux", steps:["Скачайте Hiddify для Linux.","Нажмите «Скопировать ссылку».","Добавьте подписку из буфера обмена.","Подключитесь к выбранному серверу.","Готово, VPN работает."]},
+  appletv:{name:"Apple TV", steps:["Установите Streisand на Apple TV из App Store.","На iPhone откройте этот раздел и отсканируйте QR-код.","Добавьте подписку в приложении на Apple TV.","Выберите сервер и подключитесь.","Готово, VPN работает."]},
+  androidtv:{name:"Android TV", steps:["Установите Hiddify на Android TV из Google Play.","Отсканируйте QR-код с телефона или вставьте ссылку.","Добавьте подписку в приложении.","Выберите сервер и подключитесь.","Готово, VPN работает."]},
+};
+
+const state = {
+  me: null, tab: "home", moreSub: "friends",
+  platform: "windows", guideOpen: false, step: 0,
+};
+let renderId = 0, busy = false;
+
+const plural = n => { const a = n % 100, b = n % 10; if (a > 10 && a < 20) return "дней"; if (b === 1) return "день"; if (b >= 2 && b <= 4) return "дня"; return "дней"; };
+const fmtDate = iso => new Date(iso).toLocaleDateString("ru-RU", {day:"numeric", month:"long", year:"numeric"});
+const TABS = [["home","Главная","home"],["plans","Тарифы","money"],["sub","Подписка","link"],["more","Остальное","users"],["admin","Админ","shield"]];
+const tabKeys = () => TABS.filter(([k]) =>
+  k === "sub" ? state.me?.active : k === "admin" ? state.me?.is_admin : true);
+
+async function api(path, body) {
+  const r = await fetch(path, {
+    method: body ? "POST" : "GET",
+    headers: {"Content-Type": "application/json", "X-Init-Data": INIT},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const d = data.detail;
+    throw new Error(typeof d === "string" ? d : "Ошибка запроса");
+  }
+  return data;
+}
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); toast("Скопировано"); }
+  catch { toast("Не удалось скопировать"); }
+}
+
+async function share() {
+  const url = state.me?.sub_url;
+  if (!url) return;
+  if (navigator.share) {
+    try { await navigator.share({ title: "Wispie VPN", text: url }); return; } catch {}
+  }
+  copy(url);
+}
+
+async function pay(days) {
+  try {
+    const { url } = await api("/api/pay", { days });
+    tg?.openLink ? tg.openLink(url) : window.open(url, "_blank");
+  } catch (e) { toast(e.message); }
+}
+
+/* ---------- навигация ---------- */
+
+function buildTabs() {
+  const keys = tabKeys();
+  const bar = $("#tabs");
+  bar.style.setProperty("--n", keys.length);
+  bar.innerHTML = `<span class="pill"></span>` + keys.map(([k, label, ic]) =>
+    `<button class="tab" data-t="${k}"><svg class="i"><use href="#i-${ic}"/></svg><span>${label}</span></button>`).join("");
+  moveTabs();
+}
+
+function moveTabs() {
+  const idx = Math.max(0, tabKeys().findIndex(t => t[0] === state.tab));
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.t === state.tab));
+  const pill = $(".pill");
+  if (pill) pill.style.transform = `translateX(${idx * 100}%)`;
+}
+
+/* ---------- экраны ---------- */
+
+function renderHome() {
+  const m = state.me;
+  const pct = m.active ? Math.min(100, Math.round(m.days_left / 30 * 100)) : 0;
+  const hero = `
+    <section class="glass hero">
+      <div class="between">
+        <span class="chip ${m.active ? "ok" : "bad"}"><i></i>${m.active ? "Активна" : "Не активна"}</span>
+        <svg class="i" style="width:26px;height:26px;color:var(--navy)"><use href="#i-shield"/></svg>
+      </div>
+      <div class="big">${m.active ? `${m.days_left} ${plural(m.days_left)}` : "Подключите VPN"}</div>
+      <p class="muted">${m.active ? `Действует до ${fmtDate(m.until)}` : "Выберите тариф, и доступ появится сразу после оплаты"}</p>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+    </section>`;
+
+  const action = m.active
+    ? `<section class="glass tap" data-t="sub">
+         <div class="between">
+           <div><h3>Подключение</h3><p class="muted">Ссылка, QR-код и инструкция для вашего устройства</p></div>
+           <svg class="i" style="width:26px;height:26px;color:var(--navy)"><use href="#i-link"/></svg>
+         </div>
+       </section>`
+    : `<section class="glass">
+         <h3>Начните за минуту</h3>
+         <p class="muted">Тарифы от 250 ₽. Оплата картой или СБП.</p>
+         <button class="btn" data-go="plans">Выбрать тариф</button>
+       </section>`;
+
+  const coins = `
+    <section class="glass tap" data-t="more">
+      <div class="between">
+        <div><h3>Койны: ${m.coins} 🪙</h3><p class="muted">+${m.coins_per_purchase} за каждую покупку. Тратятся в магазине.</p></div>
+        <svg class="i" style="width:26px;height:26px;color:var(--navy)"><use href="#i-users"/></svg>
+      </div>
+    </section>`;
+
+  const renew = m.active ? `<button class="btn ghost" data-go="plans">Продлить подписку</button>` : "";
+  return `<p class="eyebrow">Личный кабинет</p><h1 class="title">Привет, ${esc(m.name)}</h1>` + hero + action + coins + themeCard() + renew;
+}
+
+function renderPlans() {
+  const m = state.me, d = m.discount_pct || 0;
+  const balCard = `
+    <section class="glass">
+      <h3>Баланс</h3>
+      <div class="big" style="font-size:30px">${m.balance} ₽</div>
+      <p class="muted small">Пополните заранее. Подписку можно оплатить с баланса в один клик.</p>
+      <div class="chips">${[250, 500, 1000].map(v => `<button class="chipb" data-topup="${v}">+${v} ₽</button>`).join("")}</div>
+      <div class="row"><input id="topup_sum" placeholder="Своя сумма, ₽" inputmode="numeric"/>
+        <button class="btn sm" data-action="topup">Пополнить</button></div>
+    </section>`;
+  const box = d
+    ? `<section class="glass"><h3>Скидка ${d}% активна</h3><p class="muted">Применится к следующей оплате.</p></section>`
+    : `<section class="glass">
+         <h3>Промокод</h3>
+         <div class="row"><input id="promo" placeholder="Введите код" autocapitalize="characters"/>
+         <button class="btn sm" data-action="coupon">Применить</button></div>
+       </section>`;
+  const items = m.plans.map(p => {
+    const price = Math.round(p.price * (100 - d) / 100);
+    const perMonth = Math.round(price / (p.days / 30));
+    const best = p.days === 60;
+    const canBal = m.balance >= price;
+    return `
+      <article class="glass plan ${best ? "best" : ""}">
+        ${best ? `<span class="tag">Выгодно</span>` : ""}
+        <div class="plan-icon"><svg class="i"><use href="#i-money"/></svg></div>
+        <div class="plan-info">
+          <div class="plan-days">${p.days} ${plural(p.days)}</div>
+          <div class="muted small">≈ ${perMonth} ₽ в месяц</div>
+        </div>
+        <div class="plan-buy">
+          ${d ? `<s class="muted small">${p.price} ₽</s>` : ""}
+          <div class="price">${price} ₽</div>
+          <button class="btn sm" data-pay="${p.days}">Оплатить</button>
+          ${canBal ? `<button class="btn ghost sm" data-paybal="${p.days}" style="margin-top:6px">С баланса</button>` : ""}
+        </div>
+      </article>`;
+  }).join("");
+  return `<p class="eyebrow">Тарифы</p><h1 class="title">Выберите срок</h1>${balCard}${box}${items}
+    <p class="legal">Оплачивая подписку, вы принимаете пользовательское соглашение. Его можно прочитать в боте в разделе «Документы и поддержка».</p>`;
+}
+
+function guideBlock(p) {
+  if (!state.guideOpen) return `<button class="btn" data-guide="1">Начать настройку</button>`;
+  const n = p.steps.length, i = state.step, last = i === n - 1;
+  const dots = p.steps.map((_, k) => `<i class="${k <= i ? "on" : ""}"></i>`).join("");
+  return `
+    <div class="steps-dots">${dots}</div>
+    <div class="stepbox"><b>Шаг ${i + 1}.</b> ${esc(p.steps[i])}</div>
+    <div class="row2">
+      <button class="btn ghost" data-step="prev" ${i === 0 ? "disabled" : ""}>Назад</button>
+      <button class="btn" data-step="next">${last ? "Готово" : "Далее"}</button>
+    </div>`;
+}
+
+function renderSub() {
+  const m = state.me;
+  if (!m.active) {
+    return `<p class="eyebrow">Подписка</p><h1 class="title">Подписки нет</h1>
+      <section class="glass"><p class="muted">Раздел появится после оплаты или покупки подписки за койны.</p>
+      <button class="btn" data-go="plans">Выбрать тариф</button></section>`;
+  }
+  const p = PLATFORMS[state.platform];
+  const hasUrl = !!m.sub_url;
+  const grid = Object.entries(PLATFORMS).map(([k, v]) =>
+    `<button class="pf ${k === state.platform ? "on" : ""}" data-pf="${k}">${v.name}</button>`).join("");
+  return `
+    <p class="eyebrow">Подписка</p>
+    <h1 class="title">Подключение</h1>
+    <section class="glass">
+      <div class="between"><span class="chip ok"><i></i>Активна</span><span class="muted small">до ${fmtDate(m.until)}</span></div>
+      <div class="big" style="font-size:30px">${m.days_left} ${plural(m.days_left)}</div>
+    </section>
+    <section class="glass">
+      <h3>Выберите платформу</h3>
+      <div class="pfs">${grid}</div>
+      <button class="btn ghost" data-action="copy-sub" ${hasUrl ? "" : "disabled"}>Скопировать ссылку</button>
+      <button class="btn ghost" data-action="share" ${hasUrl ? "" : "disabled"}>Поделиться</button>
+    </section>
+    <section class="glass">
+      <div class="qrbox">
+        ${hasUrl ? `<div id="qr"></div><p class="muted small">Отсканируйте на другом устройстве</p>`
+                 : `<p class="muted">Ссылка появится после настройки VPN. Напишите в поддержку, если она не появилась.</p>`}
+      </div>
+    </section>
+    <section class="glass">
+      <h3>Настройка на ${p.name}</h3>
+      <p class="muted">${p.steps.length} шагов для завершения настройки</p>
+      ${guideBlock(p)}
+    </section>`;
+}
+
+function renderFriends() {
+  const m = state.me;
+  return `
+    <section class="glass">
+      <div class="big">+${m.ref_bonus} ${plural(m.ref_bonus)}</div>
+      <p class="muted">Начисляются за каждого друга, который впервые оплатит подписку</p>
+      <button class="btn" data-action="copy-ref">Скопировать ссылку</button>
+    </section>
+    <div class="stats">
+      <div class="glass stat"><b>${m.ref_count}</b><span>приглашено</span></div>
+      <div class="glass stat"><b>${m.ref_paid}</b><span>оплатили</span></div>
+    </div>`;
+}
+
+function renderShop() {
+  const m = state.me;
+  const note = m.discount_pct
+    ? `<section class="glass"><h3>Скидка ${m.discount_pct}% активна</h3><p class="muted">Применится к следующей оплате подписки.</p></section>`
+    : "";
+  const items = m.shop.map(s => `
+    <section class="glass shopitem">
+      <div><h3>${esc(s.title)}</h3><p class="muted small">${s.cost} 🪙</p></div>
+      <button class="btn sm" data-buy="${s.id}" ${m.coins < s.cost ? "disabled" : ""}>Купить</button>
+    </section>`).join("");
+  return note + items +
+    `<p class="legal">Койны — виртуальная валюта сервиса. Их нельзя вывести или обменять на деньги.</p>`;
+}
+
+function helpCard() {
+  const m = state.me;
+  return `
+    <section class="glass">
+      <h3>Помощь</h3>
+      <p class="muted">Ответы на частые вопросы и связь с поддержкой</p>
+      ${m.faq_url ? `<button class="btn ghost" data-open="${esc(m.faq_url)}">❓ Часто задаваемые вопросы</button>` : ""}
+      <button class="btn" data-open="${esc(m.support_url)}">💬 Написать в поддержку</button>
+    </section>`;
+}
+
+function renderMore() {
+  const m = state.me;
+  const seg = [["friends","Друзья"],["shop","Магазин"]]
+    .map(([k, l]) => `<button class="${state.moreSub === k ? "on" : ""}" data-more="${k}">${l}</button>`).join("");
+  const body = state.moreSub === "shop" ? renderShop() : renderFriends();
+  return `<p class="eyebrow">Остальное</p>
+    <h1 class="title">Койны: <span id="bal">${m.coins}</span> 🪙</h1>
+    <div class="seg">${seg}</div>${body}${helpCard()}`;
+}
+
+async function renderAdmin() {
+  const [s, cps] = await Promise.all([api("/api/admin/stats"), api("/api/admin/coupons")]);
+  const list = cps.map(c => `
+    <div class="item"><b>${esc(c.code)}</b> · −${c.percent}% · ${c.used}/${c.max_uses || "∞"}${c.active ? "" : " · выключен"}
+      ${c.active ? `<button class="btn ghost sm" data-off="${esc(c.code)}" style="margin-top:6px">Выключить</button>` : ""}
+    </div>`).join("") || `<p class="muted">Кодов пока нет</p>`;
+  return `
+    <p class="eyebrow">Панель управления</p>
+    <h1 class="title">Администратор</h1>
+    <div class="stats">
+      <div class="glass stat"><b>${s.users}</b><span>пользователей</span></div>
+      <div class="glass stat"><b>${s.active}</b><span>активных</span></div>
+      <div class="glass stat"><b>${s.revenue} ₽</b><span>выручка</span></div>
+      <div class="glass stat"><b>${s.payments}</b><span>оплат</span></div>
+    </div>
+    <section class="glass">
+      <h3>Поиск</h3>
+      <div class="row"><input id="q" placeholder="ID или @username"/><button class="btn sm" data-action="search">Найти</button></div>
+      <div id="results"></div>
+    </section>
+    <section class="glass">
+      <h3>Выдать дни</h3>
+      <input id="g_id" placeholder="ID пользователя" inputmode="numeric"/>
+      <div class="chips">${[3, 30, 60, 90].map(d => `<button class="chipb" data-days="${d}">+${d}</button>`).join("")}</div>
+      <input id="g_days" placeholder="Количество дней" inputmode="numeric"/>
+      <button class="btn" data-action="grant">Выдать</button>
+    </section>
+    <section class="glass">
+      <h3>Промокоды</h3>
+      <input id="c_code" placeholder="Код, например SALE20"/>
+      <div class="row"><input id="c_pct" placeholder="Скидка %" inputmode="numeric"/><input id="c_max" placeholder="Лимит (0 = без)" inputmode="numeric"/></div>
+      <button class="btn" data-action="coupon-add">Создать</button>
+      <div style="margin-top:8px">${list}</div>
+    </section>
+    <section class="glass">
+      <h3>Блокировка</h3>
+      <input id="b_id" placeholder="ID пользователя" inputmode="numeric"/>
+      <div class="row">
+        <button class="btn ghost sm" data-action="ban">Заблокировать</button>
+        <button class="btn ghost sm" data-action="unban">Разблокировать</button>
+      </div>
+    </section>`;
+}
+
+const views = { home: renderHome, plans: renderPlans, sub: renderSub, more: renderMore, admin: renderAdmin };
+
+async function render() {
+  const my = ++renderId;
+  let html;
+  try { html = await views[state.tab](); }
+  catch (e) { html = `<section class="glass"><p class="muted">${esc(e.message)}</p></section>`; }
+  if (my !== renderId) return;
+  $("#app").innerHTML = `<div class="view">${html}</div>`;
+  if (state.tab === "sub") drawQr();
+}
+
+function drawQr() {
+  const el = $("#qr");
+  if (!el || !state.me?.sub_url || !window.QRCode) return;
+  el.innerHTML = "";
+  new QRCode(el, { text: state.me.sub_url, width: 180, height: 180,
+    colorDark: "#1b2030", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M });
+}
+
+async function go(tab) {
+  if (tab === state.tab && $("#app .view")) return;
+  state.tab = tab;
+  tg?.HapticFeedback?.selectionChanged?.();
+  moveTabs();
+  await render();
+}
+
+async function refresh() {
+  try { state.me = await api("/api/me"); } catch { return; }
+  if (!tabKeys().some(t => t[0] === state.tab)) state.tab = "home";
+  buildTabs();
+  render();
+}
+
+/* ---------- действия ---------- */
+
+async function search() {
+  const q = $("#q").value.trim();
+  const list = await api(`/api/admin/users?q=${encodeURIComponent(q)}`);
+  $("#results").innerHTML = list.map(u => `
+    <div class="item" data-pick="${u.id}">
+      <b>${esc(u.first_name)}</b> <span class="muted small">${u.username ? "@" + esc(u.username) : ""} · ${u.id}</span>
+      <div class="muted small">${u.sub_until ? "до " + fmtDate(u.sub_until) : "нет подписки"}${u.banned ? " · заблокирован" : ""}</div>
+    </div>`).join("") || `<p class="muted">Никого не нашли</p>`;
+}
+
+async function grant() {
+  const user_id = +$("#g_id").value, days = +$("#g_days").value;
+  if (!user_id || !days) return toast("Укажите ID и количество дней");
+  try {
+    const r = await api("/api/admin/grant", { user_id, days });
+    toast(r.warning ? r.warning : `Выдано. Активна до ${fmtDate(r.until)}`);
+  } catch (e) { toast(e.message); }
+}
+
+async function ban(flag) {
+  const user_id = +$("#b_id").value;
+  if (!user_id) return toast("Укажите ID");
+  try {
+    await api("/api/admin/ban", { user_id, banned: flag });
+    toast(flag ? "Заблокирован" : "Разблокирован");
+  } catch (e) { toast(e.message); }
+}
+
+async function addCoupon() {
+  const code = $("#c_code").value.trim(), percent = +$("#c_pct").value, max_uses = +$("#c_max").value || 0;
+  try {
+    await api("/api/admin/coupons", { code, percent, max_uses });
+    toast("Промокод создан");
+    render();
+  } catch (e) { toast(e.message); }
+}
+
+async function couponOff(code) {
+  try { await api("/api/admin/coupons/off", { code }); toast("Промокод выключен"); render(); }
+  catch (e) { toast(e.message); }
+}
+
+async function applyCoupon() {
+  const code = $("#promo").value.trim();
+  if (!code) return toast("Введите код");
+  try {
+    const r = await api("/api/coupon", { code });
+    toast(`Скидка ${r.percent}% применена`);
+    await refresh();
+  } catch (e) { toast(e.message); }
+}
+
+async function buy(item) {
+  try {
+    const r = await api("/api/shop/buy", { item });
+    toast(r.warning ? r.warning : "Готово");
+    await refresh();
+  } catch (e) { toast(e.message); }
+}
+
+async function topup(amount) {
+  try {
+    const { url } = await api("/api/topup", { amount });
+    openUrl(url);
+  } catch (e) { toast(e.message); }
+}
+
+function topupFromInput() {
+  const v = +$("#topup_sum").value;
+  if (!v) return toast("Введите сумму");
+  topup(v);
+}
+
+async function payBalance(days) {
+  try {
+    await api("/api/pay_balance", { days });
+    toast("Подписка продлена с баланса");
+    await refresh();
+  } catch (e) { toast(e.message); }
+}
+
+async function shareOrCopy() { await share(); }
+
+function openUrl(url) {
+  if (!url) return;
+  if (url.startsWith("https://t.me/") && tg?.openTelegramLink) return tg.openTelegramLink(url);
+  if (tg?.openLink) return tg.openLink(url);
+  window.open(url, "_blank");
+}
+
+/* ---------- клики ---------- */
+
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-t],[data-go],[data-pay],[data-action],[data-pick],[data-days],[data-theme],[data-more],[data-buy],[data-pf],[data-guide],[data-step],[data-off],[data-open],[data-topup],[data-paybal]");
+  if (!el) return;
+  const d = el.dataset;
+  if (d.theme) return setTheme(d.theme);
+  if (d.t) return go(d.t);
+  if (d.go) return go(d.go);
+  if (d.more) { state.moreSub = d.more; return render(); }
+  if (d.buy) return buy(d.buy);
+  if (d.pf) { state.platform = d.pf; state.guideOpen = false; state.step = 0; return render(); }
+  if (d.guide) { state.guideOpen = true; state.step = 0; return render(); }
+  if (d.step) {
+    const n = PLATFORMS[state.platform].steps.length;
+    if (d.step === "next") {
+      if (state.step < n - 1) state.step++; else { state.guideOpen = false; state.step = 0; }
+    } else if (state.step > 0) state.step--;
+    return render();
+  }
+  if (d.open) return openUrl(d.open);
+  if (d.topup) return topup(+d.topup);
+  if (d.paybal) return payBalance(+d.paybal);
+  if (d.off) return couponOff(d.off);
+  if (d.pay) return pay(+d.pay);
+  if (d.pick) { const f = $("#g_id"); if (f) f.value = d.pick; return; }
+  if (d.days) { const f = $("#g_days"); if (f) f.value = d.days; return; }
+  switch (d.action) {
+    case "copy-sub": return copy(state.me.sub_url);
+    case "share": return shareOrCopy();
+    case "copy-ref": return copy(state.me.ref_link);
+    case "coupon": return applyCoupon();
+    case "topup": return topupFromInput();
+    case "coupon-add": return addCoupon();
+    case "search": return search();
+    case "grant": return grant();
+    case "ban": return ban(true);
+    case "unban": return ban(false);
+  }
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && state.me) refresh();
+});
+
+/* ---------- фон по теме ---------- */
+
+const cv = $("#bg"), ctx = cv.getContext("2d");
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let W = 0, H = 0, DPR = 1, parts = [], raf = 0;
+
+function sizeBg() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = cv.width = Math.round(innerWidth * DPR);
+  H = cv.height = Math.round(innerHeight * DPR);
+}
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+function makePart(mode, scatter) {
+  const c = fx.colors[Math.floor(Math.random() * fx.colors.length)];
+  if (mode === "orbs") {
+    return { x: rnd(0, W), y: rnd(0, H), r: rnd(160, 300) * DPR,
+             vx: rnd(-.12, .12) * DPR, vy: rnd(-.1, .1) * DPR, c, a: rnd(.14, .3) };
+  }
+  if (mode === "stars") {
+    return { x: rnd(0, W), y: scatter ? rnd(0, H) : -5 * DPR, r: rnd(.8, 1.7) * DPR,
+             vy: rnd(.25, .55) * DPR, vx: rnd(-.04, .04) * DPR, ph: rnd(0, 6.28), c };
+  }
+  return { x: rnd(0, W), y: scatter ? rnd(0, H) : H + 5 * DPR, r: rnd(1, 2) * DPR,
+           vy: -rnd(.25, .55) * DPR, ph: rnd(0, 6.28), c };
+}
+
+function resetBg() {
+  sizeBg();
+  const area = (innerWidth * innerHeight) / (390 * 844);
+  const n = Math.max(1, Math.round(fx.count * area));
+  parts = Array.from({ length: n }, () => makePart(fx.mode, true));
+  cancelAnimationFrame(raf);
+  drawBg();
+}
+
+function drawBg() {
+  ctx.clearRect(0, 0, W, H);
+  const mode = fx.mode;
+  for (const p of parts) {
+    if (!reduceMotion) {
+      if (mode === "orbs") { p.x += p.vx; p.y += p.vy; }
+      else { p.y += p.vy; p.x += p.vx + Math.sin(p.ph + p.y * .01) * .15 * DPR; }
+      p.ph += .02;
+    }
+    if (mode === "orbs") {
+      if (p.x < -p.r) p.x = W + p.r;
+      if (p.x > W + p.r) p.x = -p.r;
+      if (p.y < -p.r) p.y = H + p.r;
+      if (p.y > H + p.r) p.y = -p.r;
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, `rgba(${p.c},${p.a})`);
+      g.addColorStop(1, `rgba(${p.c},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    } else if (mode === "stars") {
+      if (p.y > H + 5 * DPR) Object.assign(p, makePart("stars", false));
+      ctx.fillStyle = `rgba(${p.c},${.5 + .5 * Math.sin(p.ph)})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    } else {
+      if (p.y < -5 * DPR) Object.assign(p, makePart("embers", false));
+      ctx.shadowBlur = 8 * DPR;
+      ctx.shadowColor = `rgba(${p.c},.8)`;
+      ctx.fillStyle = `rgba(${p.c},${.45 + .4 * Math.sin(p.ph)})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+  if (!reduceMotion && !document.hidden) raf = requestAnimationFrame(drawBg);
+}
+
+function startBg() { resetBg(); }
+
+addEventListener("resize", resetBg);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && !reduceMotion) { cancelAnimationFrame(raf); drawBg(); }
+});
+
+/* ---------- старт ---------- */
+
+(async () => {
+  let saved = null;
+  try { saved = localStorage.getItem("wispie-theme"); } catch {}
+  setTheme(THEMES[saved] ? saved : "grey");
+  startBg();
+  try { state.me = await api("/api/me"); }
+  catch (e) {
+    $("#app").innerHTML = `<div class="glass" style="margin-top:30px;text-align:center"><h2 class="title">Откройте в Telegram</h2><p class="muted">${esc(e.message)}</p></div>`;
+    return;
+  }
+  const q = new URLSearchParams(location.search);
+  if (q.get("s")) state.moreSub = q.get("s");
+  const want = q.get("tab");
+  if (want && tabKeys().some(t => t[0] === want)) state.tab = want;
+  buildTabs();
+  await render();
+})();
+</script>
+</body>
+</html>

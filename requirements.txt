@@ -1,0 +1,7 @@
+aiogram>=3.7
+fastapi
+uvicorn
+httpx
+aiosqlite
+python-dotenv
+pydantic
