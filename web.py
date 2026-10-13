@@ -560,3 +560,36 @@ async def set_email(body: EmailIn, u=Depends(current_user)):
 @app.get("/api/payments")
 async def payments_history(u=Depends(current_user)):
     return await db.payment_history(u["id"])
+
+
+# ---------- чат с поддержкой ----------
+
+class SupportIn(BaseModel):
+    text: str
+
+
+@app.get("/api/support")
+async def support_list(u=Depends(current_user)):
+    return await db.list_support(u["id"])
+
+
+@app.post("/api/support")
+async def support_send(body: SupportIn, request: Request, u=Depends(current_user)):
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(400, "Пустое сообщение")
+    if len(text) > 1000:
+        raise HTTPException(400, "Сообщение слишком длинное")
+    user = await db.get_user(u["id"])
+    nick = f"@{user['username']}" if user["username"] else (user["first_name"] or "пользователь")
+    try:
+        sent = await request.app.state.bot.send_message(
+            ADMIN_ID,
+            f"💬 Поддержка от {nick} (ID {u['id']}):\n\n{text}\n\n"
+            "Ответьте реплаем на это сообщение, чтобы ответить пользователю.",
+        )
+    except Exception:
+        log.exception("Не удалось переслать обращение в поддержку")
+        raise HTTPException(502, "Не удалось отправить, попробуйте позже")
+    await db.add_support(u["id"], "in", text, sent.message_id)
+    return {"ok": True}

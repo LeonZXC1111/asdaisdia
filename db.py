@@ -61,6 +61,14 @@ CREATE TABLE IF NOT EXISTS gifts (
     redeemed_at TEXT,
     created_at TEXT
 );
+CREATE TABLE IF NOT EXISTS support_msgs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    direction TEXT,
+    text TEXT,
+    admin_msg_id INTEGER,
+    created_at TEXT
+);
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
@@ -291,3 +299,23 @@ async def payment_history(uid):
         "WHERE user_id=? AND status='succeeded' ORDER BY created_at DESC LIMIT 50",
         (uid,),
     )
+
+
+async def add_support(uid, direction, text, admin_msg_id=None):
+    await execute(
+        "INSERT INTO support_msgs (user_id, direction, text, admin_msg_id, created_at) VALUES (?,?,?,?,?)",
+        (uid, direction, text, admin_msg_id, iso(now())),
+    )
+
+
+async def list_support(uid):
+    rows = await fetchall(
+        "SELECT direction, text, created_at FROM support_msgs WHERE user_id=? ORDER BY id DESC LIMIT 100",
+        (uid,),
+    )
+    return list(reversed(rows))
+
+
+async def support_user_by_admin_msg(message_id):
+    row = await fetchone("SELECT user_id FROM support_msgs WHERE admin_msg_id=?", (message_id,))
+    return row["user_id"] if row else None

@@ -15,7 +15,7 @@ from aiogram.types import (
 )
 
 import db
-from config import BOT_USERNAME, REFERRAL_BONUS_DAYS, SUPPORT_URL, SUPPORT_USERNAME, WEBAPP_URL
+from config import ADMIN_ID, BOT_USERNAME, REFERRAL_BONUS_DAYS, SUPPORT_URL, SUPPORT_USERNAME, WEBAPP_URL
 
 router = Router()
 log = logging.getLogger(__name__)
@@ -182,6 +182,21 @@ async def cmd_support(m: Message):
     await m.answer(text, reply_markup=Kb(inline_keyboard=[
         [Btn(text="💬 Написать в поддержку", url=SUPPORT_URL)],
     ]))
+
+
+@router.message(F.reply_to_message, F.from_user.id == ADMIN_ID)
+async def admin_reply(m: Message):
+    """Ответ администратора реплаем на обращение из мини-приложения."""
+    user_id = await db.support_user_by_admin_msg(m.reply_to_message.message_id)
+    text = (m.text or m.caption or "").strip()
+    if not user_id or not text:
+        return
+    await db.add_support(user_id, "out", text)
+    try:
+        await m.bot.send_message(user_id, f"💬 Поддержка:\n\n{text}")
+        await m.answer("✅ Отправлено пользователю")
+    except Exception:
+        await m.answer("Не удалось доставить сообщение пользователю")
 
 
 @router.message()

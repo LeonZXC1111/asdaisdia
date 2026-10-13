@@ -273,6 +273,40 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 .newsbar{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));width:min(92vw,360px);margin-left:calc(min(92vw,360px) / -2);z-index:4;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 16px;border-radius:999px;border:1px solid var(--accent-edge);background:var(--tb-bg);color:var(--ink);font:700 13px 'Manrope',sans-serif;box-shadow:0 0 16px var(--accent-glow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);cursor:pointer;animation:fadeIn .5s var(--ease) both}
 .newsbar small{color:var(--accent-ink);font-weight:800;font-size:12.5px}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+/* ---------- широкий экран (компьютер): боковая панель и сетка ---------- */
+.sidebar{display:none}
+@media (min-width:760px){
+  body{padding:20px 28px 40px 268px}
+  .tabbar{display:none}
+  .newsbar{display:none}
+  .sidebar{display:flex;flex-direction:column;position:fixed;left:16px;top:16px;bottom:16px;width:232px;padding:16px 14px;border-radius:26px;
+    background:var(--tb-bg);border:1px solid var(--tb-edge);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+    box-shadow:0 14px 34px rgba(0,0,0,.25);z-index:5}
+  .side-brand{display:flex;align-items:center;gap:10px;font:800 16px 'Manrope',sans-serif;padding:6px 8px 18px;color:var(--ink)}
+  .side-logo{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:var(--accent-bg);border:1px solid var(--accent-edge);color:var(--accent-ink)}
+  .side-nav{display:flex;flex-direction:column;gap:6px}
+  .side-tab{flex-direction:row;justify-content:flex-start;gap:12px;width:100%;padding:11px 12px;border-radius:14px;font-size:14px;color:var(--ink2)}
+  .side-tab .i{width:20px;height:20px}
+  .side-tab:hover{background:var(--ghost)}
+  .side-tab.on{background:var(--pl-bg);color:var(--accent-ink);box-shadow:0 0 14px var(--accent-glow)}
+  .side-news{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 12px;border-radius:14px;
+    border:1px solid var(--accent-edge);background:var(--accent-bg);color:var(--ink);font:700 13px 'Manrope',sans-serif;cursor:pointer;box-shadow:0 0 14px var(--accent-glow)}
+  .side-news small{color:var(--accent-ink);font-weight:800}
+  #app{max-width:1080px;margin:0}
+  .view{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;align-items:start}
+  .view>.eyebrow,.view>.title,.view>.legal{grid-column:1/-1}
+  .view>.btn{width:100%}
+  .toast{bottom:28px}
+}
+.chathead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.chathead h3{margin:0}
+.chatbox{min-height:260px;max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px}
+.bub{max-width:82%;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.4;background:var(--chip);border:1px solid var(--edge);word-break:break-word;white-space:pre-wrap}
+.bub .tiny{display:block;margin-top:3px;font-size:10.5px;opacity:.8}
+.bub.me{align-self:flex-end;background:var(--accent-bg);border-color:var(--accent-edge);color:var(--accent-ink)}
+.bub.them{align-self:flex-start}
+.chatinput{display:flex;gap:8px;align-items:center;margin-top:4px}
+.chatinput input{flex:1;margin:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -289,6 +323,7 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 
 <main id="app"></main>
 <nav class="tabbar" id="tabs"></nav>
+<aside class="sidebar" id="side"></aside>
 
 <script>
 const tg = window.Telegram?.WebApp;
@@ -450,6 +485,11 @@ function buildTabs() {
   bar.style.setProperty("--n", keys.length);
   bar.innerHTML = `<span class="pill"></span>` + keys.map(([k, label, ic]) =>
     `<button class="tab" data-t="${k}"><svg class="i"><use href="#i-${ic}"/></svg><span>${label}</span></button>`).join("");
+  $("#side").innerHTML = `
+    <div class="side-brand"><span class="side-logo"><svg class="i"><use href="#i-shield"/></svg></span>Wispie VPN</div>
+    <nav class="side-nav">${keys.map(([k, label, ic]) =>
+      `<button class="tab side-tab" data-t="${k}"><svg class="i"><use href="#i-${ic}"/></svg><span>${label}</span></button>`).join("")}</nav>
+    <button class="side-news" data-open="https://t.me/+aCAYY1vkUyQxNmMy"><span>📰 Новости</span><small>Канал →</small></button>`;
   moveTabs();
 }
 
@@ -744,11 +784,60 @@ function helpCard() {
       <h3>Помощь</h3>
       <p class="tiny">Ответы на частые вопросы и связь с поддержкой</p>
       ${m.faq_url ? `<button class="btn ghost" data-open="${esc(m.faq_url)}">Часто задаваемые вопросы</button>` : ""}
-      <button class="btn" data-open="${esc(m.support_url)}">Написать в поддержку</button>
+      <button class="btn" data-more="support">Чат с поддержкой</button>
+      <button class="btn ghost" data-open="${esc(m.support_url)}">Написать в Telegram</button>
     </section>`;
 }
 
+function bubblesHtml(list) {
+  return list.map(m => `<div class="bub ${m.direction === "in" ? "me" : "them"}">${esc(m.text)}<span class="tiny">${fmtDT(m.created_at)}</span></div>`).join("")
+    || `<p class="tiny center">Напишите ваш вопрос, мы ответим здесь</p>`;
+}
+
+async function renderSupport() {
+  const list = await api("/api/support");
+  return `
+    <div class="chathead"><button class="btn ghost sm" data-more="profile">‹ Назад</button><h3>Чат с поддержкой</h3></div>
+    <section class="glass chatbox" id="chatbox">${bubblesHtml(list)}</section>
+    <div class="chatinput">
+      <input id="sup_in" placeholder="Опишите ваш вопрос" maxlength="1000"/>
+      <button class="btn sm" data-sup-send>Отправить</button>
+    </div>`;
+}
+
+// Обновляет только переписку, не трогая поле ввода
+async function pollSupport() {
+  if (state.tab !== "more" || state.moreSub !== "support") return;
+  const cb = $("#chatbox");
+  if (!cb) return;
+  const list = await api("/api/support").catch(() => null);
+  if (!list) return;
+  const html = bubblesHtml(list);
+  if (cb.dataset.h !== html) {
+    cb.innerHTML = html;
+    cb.dataset.h = html;
+    cb.scrollTop = cb.scrollHeight;
+  }
+}
+
+async function sendSupport() {
+  const inp = $("#sup_in");
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = "";
+  try {
+    await api("/api/support", { text });
+    await pollSupport();
+  } catch (e) {
+    inp.value = text;
+    toast(e.message);
+  }
+}
+
+setInterval(pollSupport, 8000);
+
 async function renderMore() {
+  if (state.moreSub === "support") return renderSupport();
   const seg = [["profile","Профиль"],["friends","Друзья"],["shop","Магазин"]]
     .map(([k, l]) => `<button class="${state.moreSub === k ? "on" : ""}" data-more="${k}">${l}</button>`).join("");
   let body;
@@ -842,6 +931,8 @@ async function render() {
   if (my !== renderId) return;
   $("#app").innerHTML = `<div class="view">${html}</div>`;
   if (tab === "sub") drawQr();
+  const cb = $("#chatbox");
+  if (cb) cb.scrollTop = cb.scrollHeight;
   if (paths.length) {
     const results = await Promise.all(paths.map(p => fresh(p).catch(() => false)));
     if (results.some(Boolean) && state.tab === tab && my === renderId) render();
@@ -976,7 +1067,7 @@ function spinOff() {}
 /* ---------- клики и ввод ---------- */
 
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-t],[data-go],[data-pay],[data-paybal],[data-topup],[data-action],[data-pick],[data-days],[data-theme],[data-more],[data-buy],[data-pf],[data-guide],[data-step],[data-off],[data-open],[data-gday],[data-gift],[data-redeem],[data-email],[data-copy],[data-revoke],[data-devbuy],[data-devadd],[data-expand],[data-expand-go],[data-share]");
+  const el = e.target.closest("[data-t],[data-go],[data-pay],[data-paybal],[data-topup],[data-action],[data-pick],[data-days],[data-theme],[data-more],[data-buy],[data-pf],[data-guide],[data-step],[data-off],[data-open],[data-gday],[data-gift],[data-redeem],[data-email],[data-copy],[data-revoke],[data-devbuy],[data-devadd],[data-expand],[data-expand-go],[data-share],[data-sup-send]");
   if (!el) return;
   const d = el.dataset;
   if (d.theme) return setTheme(d.theme);
@@ -1005,6 +1096,7 @@ document.addEventListener("click", e => {
   if (d.redeem !== undefined) return redeemGift();
   if (d.email !== undefined) return saveEmail();
   if (d.copy) return copy(d.copy);
+  if (d.supSend !== undefined) return sendSupport();
   if (d.share !== undefined) return share();
   if (d.revoke) return devRevoke(d.revoke);
   if (d.devbuy) return devBuy(d.devbuy);
@@ -1036,6 +1128,10 @@ document.addEventListener("input", e => {
 });
 
 document.addEventListener("visibilitychange", () => { if (!document.hidden && state.me) refresh(); });
+
+document.addEventListener("keydown", e => {
+  if (e.target.id === "sup_in" && e.key === "Enter") { e.preventDefault(); sendSupport(); }
+});
 
 /* ---------- фон по теме ---------- */
 
