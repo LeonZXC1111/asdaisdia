@@ -193,7 +193,7 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 .plan-days{font-size:17px;font-weight:800}
 .plan-buy{text-align:right;min-width:104px}
 .price{font-size:17px;font-weight:800;margin-bottom:4px}
-.tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:0 0 9px 9px;background:var(--tag);color:#fff}
+.tag{display:inline-block;vertical-align:middle;margin-left:8px;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:99px;background:var(--tag);color:#fff}
 
 .shopitem{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .shopitem h3{margin:0 0 2px}
@@ -335,6 +335,7 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 #topup_sum.pop{animation:pop .35s var(--ease)}
 @keyframes pop{from{transform:scale(.94);box-shadow:0 0 0 3px var(--focus)}to{transform:none}}
 [data-topup]{transition:transform .25s var(--ease),box-shadow .3s,background .3s,color .3s}
+.chatinput{margin-bottom:8px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -608,10 +609,9 @@ function renderPlans() {
     const canBal = m.balance >= price;
     return `
       <article class="glass plan ${best ? "best" : ""}">
-        ${best ? `<span class="tag">Выгодно</span>` : ""}
         <div class="plan-icon"><svg class="i"><use href="#i-money"/></svg></div>
         <div class="plan-info">
-          <div class="plan-days">${p.days} ${plural(p.days)}</div>
+          <div class="plan-days">${p.days} ${plural(p.days)}${best ? ' <span class="tag">Выгодно</span>' : ""}</div>
           <div class="tiny">≈ ${perMonth} ₽ в месяц</div>
         </div>
         <div class="plan-buy">
@@ -1152,7 +1152,7 @@ async function render(silent = false) {
   try { html = await views[tab](); }
   catch (e) { html = `<section class="glass"><p class="muted">${esc(e.message)}</p></section>`; }
   if (my !== renderId) return;
-  $("#app").innerHTML = `<div class="view${silent ? " noanim" : ""}${tab === "support" ? " single" : ""}">${html}</div>`;
+  $("#app").innerHTML = `<div class="view${silent ? " noanim" : ""}${(tab === "support" || tab === "plans" || (tab === "admin" && state.adminUser)) ? " single" : ""}">${html}</div>`;
   if (tab === "sub") drawQr();
   if (tab === "support") renderPreview();
   if (tab === "admin") renderAdmPreview();
