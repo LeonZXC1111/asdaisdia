@@ -193,7 +193,7 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 .plan-days{font-size:17px;font-weight:800}
 .plan-buy{text-align:right;min-width:104px}
 .price{font-size:17px;font-weight:800;margin-bottom:4px}
-.tag{position:absolute;top:-1px;right:14px;font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:0 0 9px 9px;background:var(--tag);color:#fff}
+.tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;letter-spacing:.04em;padding:3px 9px;border-radius:0 0 9px 9px;background:var(--tag);color:#fff}
 
 .shopitem{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .shopitem h3{margin:0 0 2px}
@@ -277,10 +277,10 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 /* ---------- широкий экран (компьютер): боковая панель и сетка ---------- */
 .sidebar{display:none}
 @media (min-width:760px){
-  body{padding:20px 28px 40px 268px}
+  body{display:flex;align-items:flex-start;gap:24px;padding:20px 28px 40px}
   .tabbar{display:none}
   .newsbar{display:none}
-  .sidebar{display:flex;flex-direction:column;position:fixed;left:16px;top:16px;bottom:16px;width:232px;padding:16px 14px;border-radius:26px;
+  .sidebar{display:flex;flex-direction:column;position:sticky;top:16px;height:calc(100vh - 32px);flex:0 0 232px;order:-1;padding:16px 14px;border-radius:26px;
     background:var(--tb-bg);border:1px solid var(--tb-edge);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
     box-shadow:0 14px 34px rgba(0,0,0,.25);z-index:5}
   .side-brand{display:flex;align-items:center;gap:10px;font:800 16px 'Manrope',sans-serif;padding:6px 8px 18px;color:var(--ink)}
@@ -294,15 +294,17 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
     border:1px solid var(--accent-edge);background:var(--accent-bg);color:var(--ink);font:700 13px 'Manrope',sans-serif;cursor:pointer;box-shadow:0 0 14px var(--accent-glow)}
   .side-news small{color:var(--accent-ink);font-weight:800}
   /* контент — сетка карточек по центру, ряды выравниваются по высоте */
-  #app{max-width:1040px;margin:0 auto;width:100%}
+  #app{flex:1;min-width:0;max-width:1040px;margin:0 auto}
   .view{display:grid;grid-template-columns:1fr;gap:12px 14px;align-items:stretch}
-  .view>.eyebrow,.view>.title,.view>.legal{grid-column:1/-1}
+  .view>*{grid-column:1/-1}
   .view>.glass,.view>.btn{margin:0}
   .view>.btn{width:100%}
 }
 @media (min-width:1000px){
   .view{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .view>.glass,.view>.btn{grid-column:auto}
   .view.single{grid-template-columns:1fr}
+  .view.single>*{grid-column:1/-1 !important}
   .view.single{max-width:860px}
   .toast{bottom:28px}
 }
@@ -602,7 +604,7 @@ function renderPlans() {
   const items = m.plans.map(p => {
     const price = Math.round(p.price * (100 - d) / 100);
     const perMonth = Math.round(price / (p.days / 30));
-    const best = p.days === 60;
+    const best = p.days === 90;
     const canBal = m.balance >= price;
     return `
       <article class="glass plan ${best ? "best" : ""}">
@@ -1395,6 +1397,7 @@ document.addEventListener("change", e => {
 
 document.addEventListener("keydown", e => {
   if (e.target.id === "sup_in" && e.key === "Enter") { e.preventDefault(); sendSupport(); }
+  if (e.target.id === "adm_text" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); admSend(false); }
 });
 
 /* ---------- фон по теме ---------- */

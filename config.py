@@ -24,7 +24,7 @@ REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "7"))
 COINS_PER_PURCHASE = int(os.getenv("COINS_PER_PURCHASE", "10"))
 
 # дни -> цена в рублях
-PLANS = {30: 199, 60: 499, 90: 699}
+PLANS = {30: 199, 60: 349, 90: 499}
 
 # Магазин койнов
 SHOP = {
