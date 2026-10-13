@@ -20,11 +20,11 @@ MARZBAN_USER = os.getenv("MARZBAN_USER", "")
 MARZBAN_PASS = os.getenv("MARZBAN_PASS", "")
 VPN_INBOUNDS = [x.strip() for x in os.getenv("VPN_INBOUNDS", "VLESS TCP REALITY").split(",")]
 
-REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "3"))
+REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "7"))
 COINS_PER_PURCHASE = int(os.getenv("COINS_PER_PURCHASE", "10"))
 
 # дни -> цена в рублях
-PLANS = {30: 200, 60: 500, 90: 700}
+PLANS = {30: 199, 60: 499, 90: 699}
 
 # Магазин койнов
 SHOP = {

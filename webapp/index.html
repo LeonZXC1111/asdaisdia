@@ -217,7 +217,7 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 .devbtns{display:flex;gap:6px;flex-shrink:0}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--track);margin-right:6px;vertical-align:middle}
 .dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
-.expand{margin-top:10px;padding-top:10px;border-top:1px solid var(--edge);overflow:hidden;animation:expandIn .5s var(--ease) both}
+.expand{margin-top:10px;padding-top:10px;border-top:1px solid var(--edge)}
 @keyframes expandIn{from{opacity:0;max-height:0;transform:translateY(-10px)}to{opacity:1;max-height:420px;transform:none}}
 .slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;margin:14px 0 10px;outline:none;
   background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--track) var(--p,0%))}
@@ -262,6 +262,17 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 #devslider::-moz-range-thumb{width:28px;height:34px;background:transparent;border:0}
 .theming *{transition:background-color .6s var(--ease),color .6s var(--ease),border-color .6s var(--ease),box-shadow .6s var(--ease),fill .6s var(--ease) !important}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.6s;animation-timing-function:var(--ease)}
+.expwrap{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .5s var(--ease),opacity .35s var(--ease)}
+.expwrap.open{grid-template-rows:1fr;opacity:1}
+.expwrap>div{min-height:0;overflow:hidden}
+#guidecard.swap{animation:stepIn .42s var(--ease) both}
+@keyframes stepIn{from{opacity:.25;transform:translateX(16px)}to{opacity:1;transform:none}}
+.hero{padding:22px 20px}
+.hero .big{font-size:46px}
+.hero .chip{font-size:13px;padding:6px 13px}
+.newsbar{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom));width:min(92vw,360px);margin-left:calc(min(92vw,360px) / -2);z-index:4;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 16px;border-radius:999px;border:1px solid var(--accent-edge);background:var(--tb-bg);color:var(--ink);font:700 13px 'Manrope',sans-serif;box-shadow:0 0 16px var(--accent-glow);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);cursor:pointer;animation:fadeIn .5s var(--ease) both}
+.newsbar small{color:var(--accent-ink);font-weight:800;font-size:12.5px}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -296,6 +307,10 @@ const THEMES = {
   red:    { name:"Красная",   swatch:"#7a1622", tg:"#120508", fx:{ mode:"embers", count:28, colors:["255,120,130","255,190,120"] } },
 };
 let fx = THEMES.grey.fx;
+
+function tgTheme() {
+  return tg?.colorScheme === "light" ? "grey" : "black";
+}
 
 function applyTheme(key) {
   const t = THEMES[key];
@@ -447,6 +462,10 @@ function moveTabs() {
 
 /* ---------- главная ---------- */
 
+function newsBar() {
+  return `<button class="newsbar" data-open="https://t.me/+aCAYY1vkUyQxNmMy"><span>📰 Актуальные новости</span><small>Канал →</small></button>`;
+}
+
 function renderHome() {
   const m = state.me;
   const pct = m.active ? Math.min(100, Math.round(m.days_left / 30 * 100)) : 0;
@@ -472,13 +491,13 @@ function renderHome() {
   const action = m.active ? "" : `
     <section class="glass">
       <h3>Начните за минуту</h3>
-      <p class="muted small">Тарифы от 200 ₽. Оплата картой или СБП.</p>
+      <p class="muted small">Тарифы от 199 ₽. Оплата картой или СБП.</p>
       <button class="btn" data-go="plans">Выбрать тариф</button>
     </section>`;
 
   const renew = m.active ? `<button class="btn" data-go="plans">Продлить подписку</button>` : "";
   return `<p class="eyebrow">Личный кабинет</p><h1 class="title">Привет, ${esc(m.name)}</h1>`
-    + hero + devices + action + renew + themeCard();
+    + hero + devices + action + renew + newsBar();
 }
 
 /* ---------- тарифы ---------- */
@@ -592,7 +611,7 @@ async function renderSub() {
       <div class="row2" style="margin-top:6px">
         <button class="btn sm" data-devadd ${free ? "" : "disabled"}>+ Добавить устройство</button>
       </div>
-      ${state.expand ? devSlider() : ""}
+      <div class="expwrap ${state.expand ? "open" : ""}" id="expwrap"><div>${devSlider()}</div></div>
     </section>
     <section class="glass">
       <h3>Выберите платформу</h3>
@@ -607,10 +626,33 @@ async function renderSub() {
       </div>
     </section>
     <section class="glass">
-      <h3>Настройка на ${p.name}</h3>
-      <p class="tiny">${p.steps.length} шагов для завершения настройки</p>
-      ${guideBlock(p)}
+      <div id="guidecard">${guideCard(p)}</div>
     </section>`;
+}
+
+function guideCard(p) {
+  return `<h3>Настройка на ${p.name}</h3><p class="tiny">${p.steps.length} шагов для завершения настройки</p>${guideBlock(p)}`;
+}
+
+function updateGuide() {
+  const el = $("#guidecard");
+  if (!el) return render();
+  el.innerHTML = guideCard(PLATFORMS[state.platform]);
+  el.classList.remove("swap");
+  void el.offsetWidth;
+  el.classList.add("swap");
+}
+
+function updatePlatform(key) {
+  state.platform = key; state.guideOpen = false; state.step = 0;
+  document.querySelectorAll(".pf").forEach(b => b.classList.toggle("on", b.dataset.pf === key));
+  updateGuide();
+}
+
+function toggleExpand(btn) {
+  state.expand = !state.expand;
+  btn.textContent = state.expand ? "Свернуть" : "Расширить";
+  $("#expwrap")?.classList.toggle("open", state.expand);
 }
 
 function guideBlock(p) {
@@ -692,7 +734,7 @@ async function renderProfile() {
       <h3>История платежей</h3>
       ${hist}
     </section>
-    ${helpCard()}`;
+    ${helpCard()}${themeCard()}`;
 }
 
 function helpCard() {
@@ -911,13 +953,13 @@ document.addEventListener("click", e => {
   if (d.go) return go(d.go);
   if (d.more) { state.moreSub = d.more; return render(); }
   if (d.buy) return buy(d.buy);
-  if (d.pf) { state.platform = d.pf; state.guideOpen = false; state.step = 0; return render(); }
-  if (d.guide) { state.guideOpen = true; state.step = 0; return render(); }
+  if (d.pf) return updatePlatform(d.pf);
+  if (d.guide) { state.guideOpen = true; state.step = 0; return updateGuide(); }
   if (d.step) {
     const n = PLATFORMS[state.platform].steps.length;
     if (d.step === "next") { if (state.step < n - 1) state.step++; else { state.guideOpen = false; state.step = 0; } }
     else if (state.step > 0) state.step--;
-    return render();
+    return updateGuide();
   }
   if (d.off) return couponOff(d.off);
   if (d.open) return openUrl(d.open);
@@ -935,7 +977,7 @@ document.addEventListener("click", e => {
   if (d.revoke) return devRevoke(d.revoke);
   if (d.devbuy) return devBuy(d.devbuy);
   if (d.devadd !== undefined) return devAdd();
-  if (d.expand !== undefined) { state.expand = !state.expand; return render(); }
+  if (d.expand !== undefined) return toggleExpand(el);
   switch (d.action) {
     case "copy-ref": return copy(state.me.ref_link);
     case "coupon": return applyCoupon();
@@ -1051,7 +1093,8 @@ document.addEventListener("wheel", e => { if (e.ctrlKey) e.preventDefault(); }, 
 (async () => {
   let saved = null;
   try { saved = localStorage.getItem("wispie-theme"); } catch {}
-  applyTheme(THEMES[saved] ? saved : "grey");
+  applyTheme(THEMES[saved] ? saved : tgTheme());
+  try { tg?.onEvent?.("themeChanged", () => { if (!localStorage.getItem("wispie-theme")) applyTheme(tgTheme()); }); } catch {}
   try { state.me = await api("/api/me"); }
   catch (e) {
     $("#app").innerHTML = `<div class="glass" style="margin-top:30px;text-align:center"><h2 class="title">Откройте в Telegram</h2><p class="muted">${esc(e.message)}</p></div>`;
