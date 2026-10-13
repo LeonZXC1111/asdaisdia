@@ -24,7 +24,7 @@ _last_menu: dict[int, float] = {}
 _last_unknown: dict[int, float] = {}
 
 BOT_SHORT = "Быстрый VPN: доступ сразу после оплаты, оплата картой и СБП. Жмите /start"
-BOT_DESCRIPTION = """🦊 Wispie VPN
+BOT_DESCRIPTION = """🧛🏼 Wispie VPN
 
 📱 Платформы:
 └ Android · iOS · Windows · macOS · Linux · TV
@@ -91,9 +91,9 @@ def _sub_line(user):
 async def menu_text(uid):
     user = await db.get_user(uid)
     return (
-        f"Добро пожаловать, {_nick(user)} в Wispie VPN! 🦊\n\n"
-        f"💰 Баланс: {_money(user['balance'] or 0)} ₽\n"
-        f"📅 Подписка: {_sub_line(user)}\n"
+        f"Добро пожаловать, {_nick(user)} в Wispie VPN! 🧛🏼 ⚡\n\n"
+        f"💰 Баланс: {_money(user['balance'] or 0)} ₽\n\n"
+        f"📅 Подписка: {_sub_line(user)}\n\n"
         f"🆔 ID: {uid}\n\n"
         "Выберите раздел ниже 👇"
     )
@@ -159,7 +159,7 @@ async def cmd_start(m: Message, command: CommandObject):
 async def cmd_help(m: Message):
     await db.ensure_user(m.from_user.id, m.from_user.username, m.from_user.first_name)
     text = (
-        "🦊 Wispie VPN: команды бота\n\n"
+        "🧛🏼 Wispie VPN: команды бота\n\n"
         "/start — главное меню: баланс, подписка и ваш ID\n"
         "/help — эта справка\n"
         f"/support — связь с поддержкой ({SUPPORT_USERNAME})\n\n"
@@ -244,7 +244,7 @@ async def cb_inv(cb: CallbackQuery):
 
 @router.callback_query(F.data == "about")
 async def cb_about(cb: CallbackQuery):
-    text = ("🦊 О сервисе Wispie VPN\n\n"
+    text = ("🧛🏼 О сервисе Wispie VPN\n\n"
             "Простой VPN, который не мешает жить: оплатили — подключились.\n\n"
             "Что внутри:\n"
             "— доступ выдаётся сразу после оплаты;\n"

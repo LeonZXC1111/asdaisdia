@@ -1,9 +1,14 @@
+import logging
+
 import httpx
+
 from config import MARZBAN_URL, MARZBAN_USER, MARZBAN_PASS, VPN_INBOUNDS
+
+log = logging.getLogger(__name__)
 
 
 class Marzban:
-    """Адаптер для панели Marzban. Если панель другая, переписать только этот класс."""
+    """Адаптер для панели Marzban. Каждое устройство — отдельный пользователь панели."""
 
     def __init__(self):
         self.http = httpx.AsyncClient(base_url=MARZBAN_URL, timeout=20)
@@ -27,9 +32,8 @@ class Marzban:
             return r
         return r
 
-    async def sync(self, uid, until):
-        """Создаёт или продлевает VPN-аккаунт пользователя, возвращает ссылку подписки."""
-        name = f"tg{uid}"
+    async def sync_name(self, name, until):
+        """Создаёт или продлевает пользователя панели, возвращает ссылку подписки."""
         expire = int(until.timestamp())
         r = await self._request("GET", f"/api/user/{name}")
         if r.status_code == 404:
@@ -50,6 +54,19 @@ class Marzban:
         if sub.startswith("/"):
             sub = MARZBAN_URL.rstrip("/") + sub
         return sub
+
+    async def sync(self, uid, until):
+        return await self.sync_name(f"tg{uid}", until)
+
+    async def disable_name(self, name):
+        r = await self._request("PUT", f"/api/user/{name}", json={"status": "disabled"})
+        r.raise_for_status()
+
+    async def online_at(self, name):
+        r = await self._request("GET", f"/api/user/{name}")
+        if r.status_code != 200:
+            return None
+        return r.json().get("online_at")
 
 
 vpn = Marzban()

@@ -1,5 +1,8 @@
 import asyncio
 import hashlib
+import logging
+import re
+import secrets
 import uuid
 import hmac
 import json
@@ -16,12 +19,14 @@ import db
 import payments
 import service
 from bot import open_app_kb
+from vpn import vpn
 from config import (BOT_TOKEN, BOT_USERNAME, ADMIN_ID, PLANS, REFERRAL_BONUS_DAYS,
-                    SHOP, COINS_PER_PURCHASE, SUPPORT_URL)
+                    SHOP, COINS_PER_PURCHASE, SUPPORT_URL, DEVICE_BASE, DEVICE_EXTRA_PRICES, DEVICE_MAX_EXTRA)
 
 app = FastAPI(docs_url=None, redoc_url=None)
 HTML = Path(__file__).parent / "webapp" / "index.html"
 coin_lock = asyncio.Lock()
+log = logging.getLogger(__name__)
 
 
 def verify_init_data(init_data: str):
@@ -77,6 +82,8 @@ async def me(u=Depends(current_user)):
     refs = await db.fetchone("SELECT COUNT(*) AS c FROM users WHERE referrer_id=?", (u["id"],))
     paid = await db.fetchone(
         "SELECT COUNT(*) AS c FROM users WHERE referrer_id=? AND ref_rewarded=1", (u["id"],))
+    await ensure_primary(u["id"])
+    dev_rows = await db.list_devices(u["id"])
     return {
         "id": u["id"],
         "name": u.get("first_name", ""),
@@ -95,6 +102,13 @@ async def me(u=Depends(current_user)):
         "ref_count": refs["c"],
         "ref_paid": paid["c"],
         "ref_bonus": REFERRAL_BONUS_DAYS,
+        "email": user["email"],
+        "devices_used": sum(1 for r in dev_rows if r["active"]),
+        "devices_limit": DEVICE_BASE + (user["device_extra"] or 0),
+        "device_extra": user["device_extra"] or 0,
+        "device_prices": DEVICE_EXTRA_PRICES,
+        "device_base": DEVICE_BASE,
+        "max_extra": DEVICE_MAX_EXTRA,
         "faq_url": await db.get_setting("tg_faq_url"),
         "support_url": SUPPORT_URL,
     }
@@ -230,6 +244,14 @@ async def yookassa_hook(request: Request):
         except Exception:
             pass
         return {"ok": True}
+    if row.get("kind") == "devices":
+        await db.execute("UPDATE users SET device_extra = device_extra + ? WHERE id=?",
+                         (row["days"], row["user_id"]))
+        try:
+            await bot.send_message(row["user_id"], f"📱 Лимит устройств увеличен на {row['days']}.")
+        except Exception:
+            pass
+        return {"ok": True}
     coupon = row["coupon"] if row["discount"] else None
     until = await service.on_paid(row["user_id"], row["days"], coupon, bot)
     try:
@@ -340,3 +362,198 @@ class CouponOff(BaseModel):
 async def off_coupon(body: CouponOff, _=Depends(admin_user)):
     await db.execute("UPDATE coupons SET active=0 WHERE code=?", (body.code,))
     return {"ok": True}
+
+
+# ---------- устройства ----------
+
+async def ensure_primary(uid):
+    """Основное устройство — ключ, созданный при первой подписке."""
+    user = await db.get_user(uid)
+    if not user or not user["sub_url"]:
+        return
+    if not await db.device_by_name(f"tg{uid}"):
+        await db.insert_device(uid, f"tg{uid}", "Основное устройство", user["sub_url"])
+
+
+def _active_until(user):
+    until = db.parse(user["sub_until"])
+    return until if until and until > db.now() else None
+
+
+@app.get("/api/devices")
+async def devices(u=Depends(current_user)):
+    uid = u["id"]
+    user = await db.get_user(uid)
+    await ensure_primary(uid)
+    rows = await db.list_devices(uid)
+    active = _active_until(user) is not None
+    out = []
+    for r in rows:
+        online = None
+        if r["active"]:
+            try:
+                online = await vpn.online_at(r["name"])
+            except Exception:
+                online = None
+        out.append({
+            "id": r["id"],
+            "label": r["label"],
+            "active": bool(r["active"]),
+            "sub_url": r["sub_url"] if (active and r["active"]) else None,
+            "online_at": online,
+        })
+    extra = user["device_extra"] or 0
+    return {
+        "devices": out,
+        "limit": DEVICE_BASE + extra,
+        "used": sum(1 for r in rows if r["active"]),
+        "extra": extra,
+        "max_extra": DEVICE_MAX_EXTRA,
+        "prices": DEVICE_EXTRA_PRICES,
+        "base": DEVICE_BASE,
+    }
+
+
+@app.post("/api/devices/add")
+async def add_device(u=Depends(current_user)):
+    uid = u["id"]
+    user = await db.get_user(uid)
+    until = _active_until(user)
+    if not until:
+        raise HTTPException(400, "Сначала оформите подписку")
+    await ensure_primary(uid)
+    rows = await db.list_devices(uid)
+    used = sum(1 for r in rows if r["active"])
+    limit = DEVICE_BASE + (user["device_extra"] or 0)
+    if used >= limit:
+        raise HTTPException(400, "Все устройства заняты. Расширьте лимит.")
+    name = f"tg{uid}_{secrets.token_hex(3)}"
+    try:
+        sub_url = await vpn.sync_name(name, until)
+    except Exception:
+        log.exception("Не удалось создать устройство %s", name)
+        raise HTTPException(502, "VPN-панель недоступна, попробуйте позже")
+    await db.insert_device(uid, name, f"Устройство {used + 1}", sub_url)
+    return {"sub_url": sub_url}
+
+
+class DeviceIdIn(BaseModel):
+    id: int
+
+
+@app.post("/api/devices/revoke")
+async def revoke_device(body: DeviceIdIn, u=Depends(current_user)):
+    dev = await db.get_device(u["id"], body.id)
+    if not dev or not dev["active"]:
+        raise HTTPException(404, "Устройство не найдено")
+    try:
+        await vpn.disable_name(dev["name"])
+    except Exception:
+        log.exception("Не удалось отключить устройство %s", dev["name"])
+        raise HTTPException(502, "VPN-панель недоступна, попробуйте позже")
+    await db.revoke_device(u["id"], body.id)
+    return {"ok": True}
+
+
+class DevBuyIn(BaseModel):
+    count: int
+    method: str
+
+
+@app.post("/api/devices/buy")
+async def buy_devices(body: DevBuyIn, request: Request, u=Depends(current_user)):
+    uid = u["id"]
+    if not (1 <= body.count <= DEVICE_MAX_EXTRA):
+        raise HTTPException(400, "Неверное количество устройств")
+    user = await db.get_user(uid)
+    extra = user["device_extra"] or 0
+    if extra + body.count > DEVICE_MAX_EXTRA:
+        raise HTTPException(400, "Превышен максимум дополнительных устройств")
+    price = sum(DEVICE_EXTRA_PRICES[extra:extra + body.count])
+    if body.method == "balance":
+        async with coin_lock:
+            if not await db.try_spend_balance(uid, price):
+                raise HTTPException(400, "Недостаточно средств на балансе")
+            await db.execute("UPDATE users SET device_extra = device_extra + ? WHERE id=?",
+                             (body.count, uid))
+        await db.execute(
+            "INSERT INTO payments (id, user_id, amount, days, status, created_at, discount, coupon, kind) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (f"bal_{uuid.uuid4()}", uid, price, body.count, "succeeded", db.iso(db.now()), 0, None, "devices"),
+        )
+        return {"ok": True}
+    if body.method == "card":
+        pid, url = await payments.create_payment(
+            uid, price, f"Дополнительные устройства: {body.count}", "devices", body.count)
+        await db.execute(
+            "INSERT INTO payments (id, user_id, amount, days, status, created_at, discount, coupon, kind) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (pid, uid, price, body.count, "pending", db.iso(db.now()), 0, None, "devices"),
+        )
+        return {"url": url}
+    raise HTTPException(400, "Неизвестный способ оплаты")
+
+
+# ---------- подарки, почта, история ----------
+
+class GiftIn(BaseModel):
+    days: int
+
+
+@app.post("/api/gift")
+async def create_gift(body: GiftIn, u=Depends(current_user)):
+    uid = u["id"]
+    if body.days not in PLANS:
+        raise HTTPException(400, "Неизвестный тариф")
+    price = PLANS[body.days]
+    async with coin_lock:
+        if not await db.try_spend_balance(uid, price):
+            raise HTTPException(400, "Недостаточно средств на балансе")
+    code = secrets.token_hex(4).upper()
+    await db.add_gift(code, uid, body.days)
+    await db.execute(
+        "INSERT INTO payments (id, user_id, amount, days, status, created_at, discount, coupon, kind) "
+        "VALUES (?,?,?,?,?,?,?,?,?)",
+        (f"gift_{uuid.uuid4()}", uid, price, body.days, "succeeded", db.iso(db.now()), 0, None, "gift"),
+    )
+    return {"code": code, "days": body.days}
+
+
+class CodeIn(BaseModel):
+    code: str
+
+
+@app.post("/api/gift/redeem")
+async def redeem_gift(body: CodeIn, u=Depends(current_user)):
+    uid = u["id"]
+    code = body.code.strip().upper()
+    g = await db.get_gift(code)
+    if not g or g["redeemed_by"]:
+        raise HTTPException(400, "Код не найден или уже использован")
+    if g["from_uid"] == uid:
+        raise HTTPException(400, "Нельзя активировать свой подарок")
+    if not await db.redeem_gift(code, uid):
+        raise HTTPException(400, "Код уже использован")
+    until, ok = await service.activate(uid, g["days"])
+    return {
+        "until": db.iso(until),
+        "warning": None if ok else "Подписка активна, но VPN-доступ не создан. Напишите в поддержку.",
+    }
+
+
+class EmailIn(BaseModel):
+    email: str
+
+
+@app.post("/api/profile/email")
+async def set_email(body: EmailIn, u=Depends(current_user)):
+    email = body.email.strip().lower()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        raise HTTPException(400, "Некорректный email")
+    await db.set_email(u["id"], email)
+    return {"ok": True}
+
+
+@app.get("/api/payments")
+async def payments_history(u=Depends(current_user)):
+    return await db.payment_history(u["id"])

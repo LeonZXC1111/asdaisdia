@@ -8,19 +8,27 @@ log = logging.getLogger(__name__)
 
 
 async def activate(uid, days):
-    """Продлевает подписку. Возвращает (дата окончания, создан ли VPN-доступ)."""
+    """Продлевает подписку и все активные устройства. Возвращает (дата окончания, создан ли доступ)."""
     until = await db.add_days(uid, days)
+    ok = True
     try:
-        sub_url = await vpn.sync(uid, until)
-        await db.execute("UPDATE users SET sub_url=? WHERE id=?", (sub_url, uid))
-        return until, True
+        primary = await db.device_by_name(f"tg{uid}")
+        if primary is None or primary["active"]:
+            sub_url = await vpn.sync(uid, until)
+            await db.execute("UPDATE users SET sub_url=? WHERE id=?", (sub_url, uid))
+            if primary is not None:
+                await db.execute("UPDATE devices SET sub_url=? WHERE name=?", (sub_url, f"tg{uid}"))
+        for d in await db.list_devices(uid):
+            if d["active"] and d["name"] != f"tg{uid}":
+                await vpn.sync_name(d["name"], until)
     except Exception:
         log.exception("VPN-доступ не создан для пользователя %s. Проверьте Marzban.", uid)
-        return until, False
+        ok = False
+    return until, ok
 
 
 async def on_paid(uid, days, coupon, bot):
-    """Обработка реальной оплаты: подписка, койны, реферал, промокод."""
+    """Обработка оплаты подписки: доступ, койны, реферал, промокод."""
     until, _ = await activate(uid, days)
     await db.execute(
         "UPDATE users SET discount_pct=0, pending_coupon=NULL, purchases=purchases+1 WHERE id=?",

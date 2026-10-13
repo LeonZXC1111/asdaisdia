@@ -24,12 +24,16 @@ REFERRAL_BONUS_DAYS = int(os.getenv("REFERRAL_BONUS_DAYS", "3"))
 COINS_PER_PURCHASE = int(os.getenv("COINS_PER_PURCHASE", "10"))
 
 # дни -> цена в рублях
-PLANS = {30: 250, 60: 350, 90: 650}
+PLANS = {30: 200, 60: 500, 90: 700}
 
 # Магазин койнов
 SHOP = {
-    "sub14": {"title": "14 дней подписки", "cost": 100, "days": 14},
-    "sub30": {"title": "30 дней подписки", "cost": 200, "days": 30},
-    "disc20": {"title": "Скидка 20% на покупку", "cost": 70, "discount": 20},
+    "sub14": {"title": "14 дней подписки", "cost": 30, "days": 14},
+    "sub30": {"title": "30 дней подписки", "cost": 50, "days": 30},
 }
+
+# Устройства: базовый лимит и цена каждого дополнительного устройства по порядку
+DEVICE_BASE = 3
+DEVICE_EXTRA_PRICES = [35, 35, 45, 55, 65, 75, 85, 95]
+DEVICE_MAX_EXTRA = len(DEVICE_EXTRA_PRICES)
 

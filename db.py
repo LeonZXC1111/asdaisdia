@@ -44,6 +44,23 @@ CREATE TABLE IF NOT EXISTS coin_tx (
     reason TEXT,
     created_at TEXT
 );
+CREATE TABLE IF NOT EXISTS devices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    name TEXT UNIQUE,
+    label TEXT,
+    sub_url TEXT,
+    active INTEGER DEFAULT 1,
+    created_at TEXT
+);
+CREATE TABLE IF NOT EXISTS gifts (
+    code TEXT PRIMARY KEY,
+    from_uid INTEGER,
+    days INTEGER,
+    redeemed_by INTEGER,
+    redeemed_at TEXT,
+    created_at TEXT
+);
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
@@ -58,6 +75,8 @@ MIGRATIONS = {
         "pending_coupon": "TEXT",
         "purchases": "INTEGER DEFAULT 0",
         "balance": "INTEGER DEFAULT 0",
+        "email": "TEXT",
+        "device_extra": "INTEGER DEFAULT 0",
     },
     "payments": {
         "discount": "INTEGER DEFAULT 0",
@@ -218,3 +237,57 @@ async def valid_coupon(code, uid):
 async def use_coupon(uid, code):
     await execute("INSERT OR IGNORE INTO coupon_uses (user_id, code) VALUES (?,?)", (uid, code))
     await execute("UPDATE coupons SET used = used + 1 WHERE code=?", (code,))
+
+
+async def list_devices(uid):
+    return await fetchall("SELECT * FROM devices WHERE user_id=? ORDER BY id", (uid,))
+
+
+async def get_device(uid, dev_id):
+    return await fetchone("SELECT * FROM devices WHERE id=? AND user_id=?", (dev_id, uid))
+
+
+async def device_by_name(name):
+    return await fetchone("SELECT * FROM devices WHERE name=?", (name,))
+
+
+async def insert_device(uid, name, label, sub_url):
+    await execute(
+        "INSERT INTO devices (user_id, name, label, sub_url, active, created_at) VALUES (?,?,?,?,1,?)",
+        (uid, name, label, sub_url, iso(now())),
+    )
+
+
+async def revoke_device(uid, dev_id):
+    await execute("UPDATE devices SET active=0 WHERE id=? AND user_id=?", (dev_id, uid))
+
+
+async def add_gift(code, uid, days):
+    await execute(
+        "INSERT INTO gifts (code, from_uid, days, redeemed_by, redeemed_at, created_at) VALUES (?,?,?,NULL,NULL,?)",
+        (code, uid, days, iso(now())),
+    )
+
+
+async def get_gift(code):
+    return await fetchone("SELECT * FROM gifts WHERE code=?", (code,))
+
+
+async def redeem_gift(code, uid):
+    rc = await execute_rc(
+        "UPDATE gifts SET redeemed_by=?, redeemed_at=? WHERE code=? AND redeemed_by IS NULL",
+        (uid, iso(now()), code),
+    )
+    return rc == 1
+
+
+async def set_email(uid, email):
+    await execute("UPDATE users SET email=? WHERE id=?", (email, uid))
+
+
+async def payment_history(uid):
+    return await fetchall(
+        "SELECT amount, days, kind, created_at FROM payments "
+        "WHERE user_id=? AND status='succeeded' ORDER BY created_at DESC LIMIT 50",
+        (uid,),
+    )
