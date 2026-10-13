@@ -2,7 +2,7 @@
 <html lang="ru" data-theme="grey">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Wispie VPN</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -100,12 +100,14 @@
 /* ---------- база ---------- */
 :root{--ease:cubic-bezier(.2,.8,.2,1)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html{background:var(--bg-base)}
+html{background:var(--bg-base);touch-action:pan-y;-webkit-text-size-adjust:100%}
+body,button,a{touch-action:pan-y;-webkit-user-select:none;user-select:none}
+input{-webkit-user-select:text;user-select:text}
 html,body{min-height:100%}
 body{font-family:'Manrope',system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--bg-grad);
   padding:18px 16px calc(110px + env(safe-area-inset-bottom));overflow-x:hidden}
 #bg{position:fixed;inset:0;z-index:0;pointer-events:none}
-#app{position:relative;z-index:1}
+#app{position:relative;z-index:1;max-width:480px;margin:0 auto}
 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
 .view>*{animation:rise .5s var(--ease) both}
@@ -163,7 +165,7 @@ h3{font-size:15px;font-weight:700;margin-bottom:6px}
 .view>.btn{margin:0 0 12px}
 
 input{width:100%;margin:6px 0;padding:12px 13px;border-radius:14px;border:1px solid var(--edge);background:var(--field);
-  font:600 15px 'Manrope',sans-serif;color:var(--ink);outline:none;transition:border-color .25s,box-shadow .25s}
+  font:600 16px 'Manrope',sans-serif;color:var(--ink);outline:none;transition:border-color .25s,box-shadow .25s}
 input::placeholder{color:var(--ink3)}
 input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 
@@ -215,7 +217,8 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 .devbtns{display:flex;gap:6px;flex-shrink:0}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--track);margin-right:6px;vertical-align:middle}
 .dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
-.expand{margin-top:10px;padding-top:10px;border-top:1px solid var(--edge)}
+.expand{margin-top:10px;padding-top:10px;border-top:1px solid var(--edge);overflow:hidden;animation:expandIn .5s var(--ease) both}
+@keyframes expandIn{from{opacity:0;max-height:0;transform:translateY(-10px)}to{opacity:1;max-height:420px;transform:none}}
 .slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;margin:14px 0 10px;outline:none;
   background:linear-gradient(90deg,var(--accent) var(--p,0%),var(--track) var(--p,0%))}
 .slider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--accent);
@@ -245,6 +248,18 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
   box-shadow:0 10px 26px rgba(0,0,0,.25);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   animation:toastIn .3s var(--ease) both;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+.swd{display:block;width:38px;height:38px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),0 4px 10px rgba(0,0,0,.18);transition:box-shadow .35s var(--ease),transform .35s var(--ease)}
+.swcol{transition:transform .3s var(--ease)}
+.swcol.on .swd{box-shadow:0 0 0 2px var(--bg-base),0 0 0 4px var(--accent),0 0 18px var(--accent-glow)}
+.swcol:active .swd{transform:scale(.9)}
+.sbox{position:relative;height:34px;margin:14px 0 10px}
+.sdots{position:absolute;inset:0;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}
+.sdot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--track);background:transparent;transition:background .35s var(--ease),border-color .35s,box-shadow .35s,transform .35s var(--ease)}
+.sdot.on{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px var(--accent-glow)}
+.sdot.cur{transform:scale(1.4);box-shadow:0 0 0 3px var(--bg-base),0 0 0 5px var(--accent),0 0 16px var(--accent-glow)}
+#devslider{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer;-webkit-appearance:none;appearance:none;background:transparent;border:0}
+#devslider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:34px;background:transparent}
+#devslider::-moz-range-thumb{width:28px;height:34px;background:transparent;border:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -298,7 +313,7 @@ function themeCard() {
       <h3>Оформление</h3>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px">${Object.entries(THEMES).map(([k, t]) => `
         <button class="swcol ${k === cur ? "on" : ""}" data-theme="${k}" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;color:var(--ink2);font:700 10px 'Manrope',sans-serif;cursor:pointer">
-          <span style="width:38px;height:38px;border-radius:50%;background:${t.swatch};box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),0 4px 10px rgba(0,0,0,.18);${k === cur ? "outline:2px solid var(--accent);outline-offset:2px;" : ""}"></span>${t.name}
+          <span class="swd" style="background:${t.swatch}"></span>${t.name}
         </button>`).join("")}
       </div>
     </section>`;
@@ -500,11 +515,15 @@ function devSlider() {
   const dv = state.devInfo, left = dv.max_extra - dv.extra;
   if (left <= 0) return `<p class="tiny">Достигнут максимум дополнительных устройств.</p>`;
   const k = Math.min(state.addCount, left);
-  const p = left > 1 ? ((k - 1) / (left - 1)) * 100 : 100;
+  const dots = Array.from({ length: left }, (_, i) =>
+    `<span class="sdot ${i < k ? "on" : ""} ${i === k - 1 ? "cur" : ""}"></span>`).join("");
   return `
     <div class="expand">
       <p class="tiny">Первые устройства дешевле, дальше цена растёт.</p>
-      <input type="range" class="slider" id="devslider" min="1" max="${left}" value="${k}" style="--p:${p}%">
+      <div class="sbox">
+        <div class="sdots">${dots}</div>
+        <input type="range" id="devslider" min="1" max="${left}" value="${k}" aria-label="Количество устройств">
+      </div>
       <div class="between">
         <span class="small" id="devlabel">Расширится до ${dv.limit + k} устройств</span>
         <b id="devprice">${priceFor(dv, k)} ₽</b>
@@ -911,12 +930,15 @@ document.addEventListener("click", e => {
   }
 });
 
-// Ползунок устройств обновляет подписи без перерисовки (чтобы не сбивать перетаскивание)
+// Слайдер: точки заполняются по мере движения, текущая светится
 document.addEventListener("input", e => {
   if (e.target.id !== "devslider" || !state.devInfo) return;
-  const dv = state.devInfo, k = +e.target.value, left = dv.max_extra - dv.extra;
+  const dv = state.devInfo, k = +e.target.value;
   state.addCount = k;
-  e.target.style.setProperty("--p", (left > 1 ? ((k - 1) / (left - 1)) * 100 : 100) + "%");
+  document.querySelectorAll(".sdot").forEach((el, i) => {
+    el.classList.toggle("on", i < k);
+    el.classList.toggle("cur", i === k - 1);
+  });
   $("#devlabel").textContent = `Расширится до ${dv.limit + k} устройств`;
   $("#devprice").textContent = `${priceFor(dv, k)} ₽`;
 });
@@ -999,6 +1021,12 @@ addEventListener("resize", resetBg);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden && !reduceMotion) { cancelAnimationFrame(raf); drawBg(); }
 });
+
+/* ---------- запрет масштабирования жестами ---------- */
+["gesturestart","gesturechange","gestureend"].forEach(ev =>
+  document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+document.addEventListener("wheel", e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
 
 /* ---------- старт ---------- */
 
