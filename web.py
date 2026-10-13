@@ -20,6 +20,7 @@ from pydantic import BaseModel
 import db
 import payments
 import service
+from aiogram.types import FSInputFile
 from bot import notify_admin_support, open_app_kb, open_support_kb
 from vpn import vpn
 from config import (BOT_TOKEN, BOT_USERNAME, ADMIN_ID, PLANS, REFERRAL_BONUS_DAYS,
@@ -192,7 +193,11 @@ class TopupIn(BaseModel):
 async def topup(body: TopupIn, u=Depends(current_user)):
     if not (100 <= body.amount <= 20000):
         raise HTTPException(400, "Сумма от 100 до 20 000 ₽")
-    pid, url = await payments.create_payment(u["id"], body.amount, "Пополнение баланса", "topup", 0)
+    try:
+        pid, url = await payments.create_payment(u["id"], body.amount, "Пополнение баланса", "topup", 0)
+    except Exception:
+        log.exception("Не удалось создать платёж на пополнение")
+        raise HTTPException(502, "Платёжный сервис временно недоступен. Попробуйте позже")
     await db.execute(
         "INSERT INTO payments (id, user_id, amount, days, status, created_at, discount, coupon, kind) "
         "VALUES (?,?,?,?,?,?,?,?,?)",
@@ -654,22 +659,31 @@ async def admin_thread(user_id: int, _=Depends(admin_user)):
 
 class AdminReplyIn(BaseModel):
     user_id: int
-    text: str
+    text: str = ""
     close: bool = False
+    image: str | None = None
 
 
 @app.post("/api/admin/support/reply")
 async def admin_support_reply(body: AdminReplyIn, request: Request, _=Depends(admin_user)):
     text = body.text.strip()
-    if not text:
-        raise HTTPException(400, "Пустой ответ")
+    if not text and not body.image:
+        raise HTTPException(400, "Напишите ответ или прикрепите фото")
+    if len(text) > 1000:
+        raise HTTPException(400, "Сообщение слишком длинное")
     if not await db.get_user(body.user_id):
         raise HTTPException(404, "Пользователь не найден")
-    await db.add_support(body.user_id, "out", text)
+    name = save_image(body.image) if body.image else None
+    await db.add_support(body.user_id, "out", text, name)
     await db.set_thread(body.user_id, "closed" if body.close else "open", False)
+    bot = request.app.state.bot
+    caption = f"💬 Поддержка:\n\n{text}" if text else "💬 Поддержка"
     try:
-        await request.app.state.bot.send_message(
-            body.user_id, f"💬 Поддержка:\n\n{text}", reply_markup=open_support_kb())
+        if name:
+            await bot.send_photo(body.user_id, FSInputFile(SUPPORT_DIR / name),
+                                 caption=caption, reply_markup=open_support_kb())
+        else:
+            await bot.send_message(body.user_id, caption, reply_markup=open_support_kb())
     except Exception:
         log.exception("Ответ не доставлен пользователю %s", body.user_id)
         raise HTTPException(502, "Ответ сохранён, но не доставлен: возможно, пользователь заблокировал бота")
