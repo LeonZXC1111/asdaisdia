@@ -387,14 +387,17 @@ async def devices(u=Depends(current_user)):
     await ensure_primary(uid)
     rows = await db.list_devices(uid)
     active = _active_until(user) is not None
+    async def _online(r):
+        if not r["active"]:
+            return None
+        try:
+            return await vpn.online_at(r["name"])
+        except Exception:
+            return None
+
+    onlines = await asyncio.gather(*[_online(r) for r in rows])
     out = []
-    for r in rows:
-        online = None
-        if r["active"]:
-            try:
-                online = await vpn.online_at(r["name"])
-            except Exception:
-                online = None
+    for r, online in zip(rows, onlines):
         out.append({
             "id": r["id"],
             "label": r["label"],

@@ -579,7 +579,7 @@ async function renderSub() {
       <section class="glass"><p class="muted">Раздел появится после оплаты или подарка.</p>
       <button class="btn" data-go="plans">Выбрать тариф</button></section>`;
   }
-  const dv = await api("/api/devices");
+  const dv = await getData("/api/devices");
   state.devInfo = dv;
   const rows = dv.devices.map(d => {
     const onl = d.active && d.online_at && Date.now() - Date.parse(d.online_at) < 5 * 60 * 1000;
@@ -698,7 +698,7 @@ function renderShop() {
 
 async function renderProfile() {
   const m = state.me;
-  const pays = await api("/api/payments");
+  const pays = await getData("/api/payments");
   const hist = pays.length ? pays.map(p => `
     <div class="item">
       <div class="between"><span class="small">${KIND[p.kind] || p.kind}</span>
@@ -761,7 +761,7 @@ async function renderMore() {
 /* ---------- админ ---------- */
 
 async function renderAdmin() {
-  const [s, cps] = await Promise.all([api("/api/admin/stats"), api("/api/admin/coupons")]);
+  const [s, cps] = await Promise.all([getData("/api/admin/stats"), getData("/api/admin/coupons")]);
   const list = cps.map(c => `
     <div class="item"><b class="small">${esc(c.code)}</b> · −${c.percent}% · ${c.used}/${c.max_uses || "∞"}${c.active ? "" : " · выключен"}
       ${c.active ? `<button class="btn ghost sm" data-off="${esc(c.code)}" style="margin-top:6px">Выключить</button>` : ""}
@@ -806,14 +806,46 @@ async function renderAdmin() {
 
 const views = { home: renderHome, plans: renderPlans, sub: renderSub, more: renderMore, admin: renderAdmin };
 
+const cache = new Map();
+
+// Загружает данные и сообщает, изменились ли они
+async function fresh(path) {
+  const d = await api(path);
+  const str = JSON.stringify(d);
+  const changed = !cache.has(path) || cache.get(path).str !== str;
+  cache.set(path, { d, str });
+  return changed;
+}
+
+async function getData(path) {
+  if (cache.has(path)) return cache.get(path).d;
+  await fresh(path);
+  return cache.get(path).d;
+}
+
+const DATA_BY_TAB = {
+  sub: ["/api/devices"],
+  more: ["/api/payments"],
+  admin: ["/api/admin/stats", "/api/admin/coupons"],
+};
+
+// Показывает сохранённые данные сразу, затем обновляет их в фоне
 async function render() {
   const my = ++renderId;
+  const tab = state.tab;
+  const paths = DATA_BY_TAB[tab] || [];
+  const warm = paths.every(p => cache.has(p));
+  if (!warm) $("#app").innerHTML = `<div class="view"><p class="tiny">Загрузка…</p></div>`;
   let html;
-  try { html = await views[state.tab](); }
+  try { html = await views[tab](); }
   catch (e) { html = `<section class="glass"><p class="muted">${esc(e.message)}</p></section>`; }
   if (my !== renderId) return;
   $("#app").innerHTML = `<div class="view">${html}</div>`;
-  if (state.tab === "sub") drawQr();
+  if (tab === "sub") drawQr();
+  if (paths.length) {
+    const results = await Promise.all(paths.map(p => fresh(p).catch(() => false)));
+    if (results.some(Boolean) && state.tab === tab && my === renderId) render();
+  }
 }
 
 function drawQr() {
