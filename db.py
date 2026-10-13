@@ -69,6 +69,12 @@ CREATE TABLE IF NOT EXISTS support_msgs (
     admin_msg_id INTEGER,
     created_at TEXT
 );
+CREATE TABLE IF NOT EXISTS support_threads (
+    user_id INTEGER PRIMARY KEY,
+    status TEXT,
+    pending INTEGER DEFAULT 0,
+    updated_at TEXT
+);
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
@@ -86,6 +92,7 @@ MIGRATIONS = {
         "email": "TEXT",
         "device_extra": "INTEGER DEFAULT 0",
     },
+    "support_msgs": {"image": "TEXT"},
     "payments": {
         "discount": "INTEGER DEFAULT 0",
         "coupon": "TEXT",
@@ -301,19 +308,51 @@ async def payment_history(uid):
     )
 
 
-async def add_support(uid, direction, text, admin_msg_id=None):
+async def add_support(uid, direction, text, image=None, admin_msg_id=None):
     await execute(
-        "INSERT INTO support_msgs (user_id, direction, text, admin_msg_id, created_at) VALUES (?,?,?,?,?)",
-        (uid, direction, text, admin_msg_id, iso(now())),
+        "INSERT INTO support_msgs (user_id, direction, text, image, admin_msg_id, created_at) VALUES (?,?,?,?,?,?)",
+        (uid, direction, text, image, admin_msg_id, iso(now())),
     )
+
+
+async def set_thread(uid, status, pending):
+    await execute(
+        "INSERT INTO support_threads (user_id, status, pending, updated_at) VALUES (?,?,?,?) "
+        "ON CONFLICT(user_id) DO UPDATE SET status=excluded.status, pending=excluded.pending, "
+        "updated_at=excluded.updated_at",
+        (uid, status, 1 if pending else 0, iso(now())),
+    )
+
+
+async def get_thread(uid):
+    return await fetchone("SELECT * FROM support_threads WHERE user_id=?", (uid,))
 
 
 async def list_support(uid):
     rows = await fetchall(
-        "SELECT direction, text, created_at FROM support_msgs WHERE user_id=? ORDER BY id DESC LIMIT 100",
+        "SELECT direction, text, image, created_at FROM support_msgs WHERE user_id=? ORDER BY id DESC LIMIT 100",
         (uid,),
     )
     return list(reversed(rows))
+
+
+async def list_threads(limit=50):
+    return await fetchall(
+        "SELECT t.user_id, t.status, t.pending, t.updated_at, u.username, u.first_name, "
+        "(SELECT text FROM support_msgs m WHERE m.user_id=t.user_id ORDER BY m.id DESC LIMIT 1) AS last_text "
+        "FROM support_threads t JOIN users u ON u.id=t.user_id "
+        "ORDER BY t.pending DESC, t.updated_at DESC LIMIT ?",
+        (limit,),
+    )
+
+
+async def pending_count():
+    row = await fetchone("SELECT COUNT(*) AS c FROM support_threads WHERE pending=1")
+    return row["c"]
+
+
+async def support_file_owner(name):
+    return await fetchone("SELECT user_id FROM support_msgs WHERE image=?", (name,))
 
 
 async def support_user_by_admin_msg(message_id):

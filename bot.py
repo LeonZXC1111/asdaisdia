@@ -184,6 +184,16 @@ async def cmd_support(m: Message):
     ]))
 
 
+def open_support_kb():
+    return Kb(inline_keyboard=[[Btn(text="💬 Открыть чат", web_app=_app("?tab=support"))]])
+
+
+async def notify_admin_support(bot, uid, nick):
+    """Одно уведомление о новом обращении; дальше обращения смотрят в приложении."""
+    kb = Kb(inline_keyboard=[[Btn(text="💬 Открыть обращения", web_app=_app("?tab=admin"))]])
+    await bot.send_message(ADMIN_ID, f"🔔 Новое обращение в поддержку\n{nick} · ID {uid}", reply_markup=kb)
+
+
 @router.message(F.reply_to_message, F.from_user.id == ADMIN_ID)
 async def admin_reply(m: Message):
     """Ответ администратора реплаем на обращение из мини-приложения."""
@@ -192,8 +202,9 @@ async def admin_reply(m: Message):
     if not user_id or not text:
         return
     await db.add_support(user_id, "out", text)
+    await db.set_thread(user_id, "open", False)
     try:
-        await m.bot.send_message(user_id, f"💬 Поддержка:\n\n{text}")
+        await m.bot.send_message(user_id, f"💬 Поддержка:\n\n{text}", reply_markup=open_support_kb())
         await m.answer("✅ Отправлено пользователю")
     except Exception:
         await m.answer("Не удалось доставить сообщение пользователю")

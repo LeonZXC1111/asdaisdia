@@ -111,6 +111,7 @@ body{font-family:'Manrope',system-ui,-apple-system,sans-serif;color:var(--ink);b
 svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
 .view>*{animation:rise .5s var(--ease) both}
+.view.noanim>*{animation:none}
 .view>*:nth-child(2){animation-delay:.04s}
 .view>*:nth-child(3){animation-delay:.08s}
 .view>*:nth-child(4){animation-delay:.12s}
@@ -292,21 +293,33 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
   .side-news{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 12px;border-radius:14px;
     border:1px solid var(--accent-edge);background:var(--accent-bg);color:var(--ink);font:700 13px 'Manrope',sans-serif;cursor:pointer;box-shadow:0 0 14px var(--accent-glow)}
   .side-news small{color:var(--accent-ink);font-weight:800}
-  #app{max-width:1080px;margin:0}
-  .view{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;align-items:start}
-  .view>.eyebrow,.view>.title,.view>.legal{grid-column:1/-1}
+  /* контент — ровная колонка по центру свободной области, карточки не сдвигаются */
+  #app{max-width:1040px;margin:0 auto;width:100%}
+  .view{column-count:1;column-gap:14px}
+  .view>*{break-inside:avoid;-webkit-column-break-inside:avoid}
+  .view>.eyebrow,.view>.title,.view>.legal{column-span:all}
   .view>.btn{width:100%}
+}
+@media (min-width:1000px){
+  .view{column-count:2}
   .toast{bottom:28px}
 }
 .chathead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .chathead h3{margin:0}
-.chatbox{min-height:260px;max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px}
+.chatbox{min-height:52vh;max-height:64vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:14px}
 .bub{max-width:82%;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.4;background:var(--chip);border:1px solid var(--edge);word-break:break-word;white-space:pre-wrap}
 .bub .tiny{display:block;margin-top:3px;font-size:10.5px;opacity:.8}
 .bub.me{align-self:flex-end;background:var(--accent-bg);border-color:var(--accent-edge);color:var(--accent-ink)}
 .bub.them{align-self:flex-start}
 .chatinput{display:flex;gap:8px;align-items:center;margin-top:4px}
 .chatinput input{flex:1;margin:0}
+.bimg{display:block;max-width:220px;width:100%;border-radius:12px;margin-bottom:4px}
+.attach{padding:8px 11px;font-size:16px}
+.prevrow{display:flex;gap:10px;align-items:center;margin:6px 0}
+.previmg{width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid var(--edge)}
+.admta{width:100%;margin:8px 0;padding:12px;border-radius:14px;border:1px solid var(--edge);background:var(--field);color:var(--ink);font:600 15px 'Manrope',sans-serif;outline:none;resize:vertical}
+.tpls{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.item[data-adm-open]{cursor:pointer}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -318,6 +331,7 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
   <symbol id="i-money" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="2.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6 10v4M18 10v4"/></symbol>
   <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
   <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.3"/><path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><path d="M15.5 5.6a3.2 3.2 0 0 1 0 5.9M17.5 14.7c1.9.8 3 2.7 3.3 4.8"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5.5h16v10H9l-4.5 3.5V15.5H4z"/></symbol>
   <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2 19 6v5.6c0 4.3-2.9 7.6-7 9.2-4.1-1.6-7-4.9-7-9.2V6z"/><path d="m9 12.2 2 2 4-4"/></symbol>
 </svg>
 
@@ -416,7 +430,13 @@ function ago(iso) {
   if (s < 86400) return Math.floor(s / 3600) + " ч назад";
   return Math.floor(s / 86400) + " дн назад";
 }
-const TABS = [["home","Главная","home"],["plans","Тарифы","money"],["sub","Подписка","link"],["more","Остальное","users"],["admin","Админ","shield"]];
+const TABS = [["home","Главная","home"],["plans","Тарифы","money"],["sub","Подписка","link"],["more","Остальное","users"],["support","Поддержка","chat"],["admin","Админ","shield"]];
+const TEMPLATES = [
+  "Здравствуйте! Подскажите, пожалуйста, что именно не работает?",
+  "Проверьте, что подписка активна, и обновите ссылку в приложении.",
+  "Спасибо, вопрос решён. Если появятся ещё вопросы, пишите.",
+  "Передали разработчикам, ответим, как только будет решение.",
+];
 const tabKeys = () => TABS.filter(([k]) => k === "sub" ? state.me?.active : k === "admin" ? state.me?.is_admin : true);
 
 async function api(path, body) {
@@ -589,6 +609,7 @@ function renderPlans() {
 const priceFor = (dv, k) => dv.prices.slice(dv.extra, dv.extra + k).reduce((a, b) => a + b, 0);
 
 function devSlider() {
+  if (!state.devInfo) return '<p class="tiny">Загрузка…</p>';
   const dv = state.devInfo, left = dv.max_extra - dv.extra;
   if (left <= 0) return `<p class="tiny">Достигнут максимум дополнительных устройств.</p>`;
   const k = Math.min(state.addCount, left);
@@ -619,9 +640,11 @@ async function renderSub() {
       <section class="glass"><p class="muted">Раздел появится после оплаты или подарка.</p>
       <button class="btn" data-go="plans">Выбрать тариф</button></section>`;
   }
-  const dv = await getData("/api/devices");
-  state.devInfo = dv;
-  const rows = dv.devices.map(d => {
+  // данные устройств берём из кэша сразу, без ожидания сети
+  const cached = cache.get("/api/devices");
+  const dv = cached ? cached.d : { devices: null, used: 0, limit: 3, extra: 0, max_extra: 8, prices: [35, 35, 45, 55, 65, 75, 85, 95] };
+  if (cached) state.devInfo = dv;
+  const rows = !dv.devices ? '<p class="tiny">Загрузка…</p>' : dv.devices.map(d => {
     const onl = d.active && d.online_at && Date.now() - Date.parse(d.online_at) < 5 * 60 * 1000;
     const status = !d.active ? "отключено" : onl ? "онлайн" : d.online_at ? `был(а) ${ago(d.online_at)}` : "ещё не подключалось";
     return `
@@ -784,30 +807,72 @@ function helpCard() {
       <h3>Помощь</h3>
       <p class="tiny">Ответы на частые вопросы и связь с поддержкой</p>
       ${m.faq_url ? `<button class="btn ghost" data-open="${esc(m.faq_url)}">Часто задаваемые вопросы</button>` : ""}
-      <button class="btn" data-more="support">Чат с поддержкой</button>
       <button class="btn ghost" data-open="${esc(m.support_url)}">Написать в Telegram</button>
     </section>`;
 }
 
 function bubblesHtml(list) {
-  return list.map(m => `<div class="bub ${m.direction === "in" ? "me" : "them"}">${esc(m.text)}<span class="tiny">${fmtDT(m.created_at)}</span></div>`).join("")
+  return list.map(m => `<div class="bub ${m.direction === "in" ? "me" : "them"}">${m.image ? `<img class="bimg" data-img="${m.image}" alt="фото">` : ""}${m.text ? esc(m.text) : ""}<span class="tiny">${fmtDT(m.created_at)}</span></div>`).join("")
     || `<p class="tiny center">Напишите ваш вопрос, мы ответим здесь</p>`;
 }
 
-async function renderSupport() {
-  const list = await api("/api/support");
-  return `
-    <div class="chathead"><button class="btn ghost sm" data-more="profile">‹ Назад</button><h3>Чат с поддержкой</h3></div>
-    <section class="glass chatbox" id="chatbox">${bubblesHtml(list)}</section>
-    <div class="chatinput">
-      <input id="sup_in" placeholder="Опишите ваш вопрос" maxlength="1000"/>
-      <button class="btn sm" data-sup-send>Отправить</button>
-    </div>`;
+const imgCache = new Map();
+async function loadImages() {
+  document.querySelectorAll("img[data-img]").forEach(async el => {
+    const name = el.dataset.img;
+    if (!imgCache.has(name)) {
+      const r = await fetch(`/api/support/file/${name}`, { headers: { "X-Init-Data": INIT } });
+      if (!r.ok) return;
+      imgCache.set(name, URL.createObjectURL(await r.blob()));
+    }
+    el.src = imgCache.get(name);
+  });
 }
 
-// Обновляет только переписку, не трогая поле ввода
+async function renderSupportTab() {
+  const list = await getData("/api/support");
+  return `
+    <p class="eyebrow">Поддержка</p>
+    <h1 class="title">Чат с поддержкой</h1>
+    <section class="glass chatbox" id="chatbox">${bubblesHtml(list)}</section>
+    <div id="supPrev"></div>
+    <div class="chatinput">
+      <button class="btn ghost sm attach" data-sup-attach title="Прикрепить фото">📎</button>
+      <input id="sup_in" placeholder="Опишите вопрос" maxlength="1000"/>
+      <button class="btn sm" data-sup-send>Отправить</button>
+    </div>
+    <input type="file" id="sup_file" accept="image/*" hidden>`;
+}
+
+function renderPreview() {
+  const el = $("#supPrev");
+  if (!el) return;
+  el.innerHTML = state.pendingImg
+    ? `<div class="prevrow"><img class="previmg" src="${state.pendingImg}" alt=""><button class="btn ghost sm" data-sup-clear>Убрать фото</button></div>`
+    : "";
+}
+
+// Уменьшаем фото перед отправкой: быстрее и экономит трафик
+function attachImage(file) {
+  if (!file) return;
+  if (!file.type.startsWith("image/")) return toast("Нужно изображение");
+  const img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * k);
+    c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    state.pendingImg = c.toDataURL("image/jpeg", 0.85);
+    URL.revokeObjectURL(img.src);
+    renderPreview();
+  };
+  img.onerror = () => toast("Не удалось открыть фото");
+  img.src = URL.createObjectURL(file);
+}
+
 async function pollSupport() {
-  if (state.tab !== "more" || state.moreSub !== "support") return;
+  if (state.tab !== "support") return;
   const cb = $("#chatbox");
   if (!cb) return;
   const list = await api("/api/support").catch(() => null);
@@ -816,28 +881,78 @@ async function pollSupport() {
   if (cb.dataset.h !== html) {
     cb.innerHTML = html;
     cb.dataset.h = html;
+    loadImages();
     cb.scrollTop = cb.scrollHeight;
   }
 }
 
 async function sendSupport() {
   const inp = $("#sup_in");
-  const text = inp.value.trim();
-  if (!text) return;
+  const text = inp.value.trim(), image = state.pendingImg || null;
+  if (!text && !image) return;
   inp.value = "";
+  state.pendingImg = null;
+  renderPreview();
   try {
-    await api("/api/support", { text });
+    await api("/api/support", { text, image });
     await pollSupport();
   } catch (e) {
     inp.value = text;
+    state.pendingImg = image;
+    renderPreview();
     toast(e.message);
   }
 }
 
 setInterval(pollSupport, 8000);
 
+async function adminInbox() {
+  if (state.adminUser) {
+    const t = await api(`/api/admin/support/thread?user_id=${state.adminUser}`);
+    return `
+      <section class="glass">
+        <div class="between">
+          <button class="btn ghost sm" data-adm-back>‹ К списку</button>
+          <b class="small">${esc(t.user.name || "")} ${t.user.username ? "@" + esc(t.user.username) : ""} · ${t.user.id}</b>
+        </div>
+        <div class="chatbox" id="chatbox" style="min-height:200px;max-height:40vh;margin-top:10px">${bubblesHtml(t.messages)}</div>
+        <div class="tpls">${TEMPLATES.map((x, i) => `<button class="chipb" data-tpl="${i}">Шаблон ${i + 1}</button>`).join("")}</div>
+        <textarea id="adm_text" rows="3" placeholder="Ответ пользователю" class="admta"></textarea>
+        <div class="row2">
+          <button class="btn sm" data-adm-reply>Отправить</button>
+          <button class="btn ghost sm" data-adm-close>Отправить и закрыть</button>
+        </div>
+      </section>`;
+  }
+  const { threads, pending } = await api("/api/admin/support/threads");
+  const rows = threads.map(t => `
+    <div class="item" data-adm-open="${t.user_id}">
+      <div class="between">
+        <b class="small">${esc(t.first_name || "")} ${t.username ? "@" + esc(t.username) : ""}</b>
+        ${t.pending ? `<span class="chip bad"><i></i>ждёт ответа</span>` : `<span class="tiny">${t.status === "closed" ? "закрыто" : "в работе"}</span>`}
+      </div>
+      <div class="tiny">${esc((t.last_text || "").slice(0, 80))}</div>
+    </div>`).join("");
+  return `
+    <section class="glass">
+      <div class="between"><h3>Обращения</h3><span class="chip ${pending ? "bad" : "ok"}"><i></i>Ожидают: ${pending}</span></div>
+      ${rows || `<p class="tiny">Обращений пока нет</p>`}
+    </section>`;
+}
+
+async function admSend(close) {
+  const ta = $("#adm_text");
+  const text = ta.value.trim();
+  if (!text) return toast("Введите ответ");
+  try {
+    await api("/api/admin/support/reply", { user_id: state.adminUser, text, close });
+    toast("Отправлено");
+    if (close) state.adminUser = null;
+    render();
+  } catch (e) { toast(e.message); }
+}
+
 async function renderMore() {
-  if (state.moreSub === "support") return renderSupport();
   const seg = [["profile","Профиль"],["friends","Друзья"],["shop","Магазин"]]
     .map(([k, l]) => `<button class="${state.moreSub === k ? "on" : ""}" data-more="${k}">${l}</button>`).join("");
   let body;
@@ -858,6 +973,7 @@ async function renderAdmin() {
   return `
     <p class="eyebrow">Панель управления</p>
     <h1 class="title">Администратор</h1>
+    ${await adminInbox()}
     <div class="stats">
       <div class="glass stat"><b>${s.users}</b><span>пользователей</span></div>
       <div class="glass stat"><b>${s.active}</b><span>активных</span></div>
@@ -893,7 +1009,7 @@ async function renderAdmin() {
     </section>`;
 }
 
-const views = { home: renderHome, plans: renderPlans, sub: renderSub, more: renderMore, admin: renderAdmin };
+const views = { home: renderHome, plans: renderPlans, sub: renderSub, more: renderMore, support: renderSupportTab, admin: renderAdmin };
 
 const cache = new Map();
 
@@ -915,11 +1031,12 @@ async function getData(path) {
 const DATA_BY_TAB = {
   sub: ["/api/devices"],
   more: ["/api/payments"],
+  support: ["/api/support"],
   admin: ["/api/admin/stats", "/api/admin/coupons"],
 };
 
 // Показывает сохранённые данные сразу, затем обновляет их в фоне
-async function render() {
+async function render(silent = false) {
   const my = ++renderId;
   const tab = state.tab;
   const paths = DATA_BY_TAB[tab] || [];
@@ -929,13 +1046,15 @@ async function render() {
   try { html = await views[tab](); }
   catch (e) { html = `<section class="glass"><p class="muted">${esc(e.message)}</p></section>`; }
   if (my !== renderId) return;
-  $("#app").innerHTML = `<div class="view">${html}</div>`;
+  $("#app").innerHTML = `<div class="view${silent ? " noanim" : ""}">${html}</div>`;
   if (tab === "sub") drawQr();
+  if (tab === "support") renderPreview();
+  loadImages();
   const cb = $("#chatbox");
   if (cb) cb.scrollTop = cb.scrollHeight;
   if (paths.length) {
     const results = await Promise.all(paths.map(p => fresh(p).catch(() => false)));
-    if (results.some(Boolean) && state.tab === tab && my === renderId) render();
+    if (results.some(Boolean) && state.tab === tab && tab !== "support" && my === renderId) render(true);
   }
 }
 
@@ -1067,7 +1186,7 @@ function spinOff() {}
 /* ---------- клики и ввод ---------- */
 
 document.addEventListener("click", e => {
-  const el = e.target.closest("[data-t],[data-go],[data-pay],[data-paybal],[data-topup],[data-action],[data-pick],[data-days],[data-theme],[data-more],[data-buy],[data-pf],[data-guide],[data-step],[data-off],[data-open],[data-gday],[data-gift],[data-redeem],[data-email],[data-copy],[data-revoke],[data-devbuy],[data-devadd],[data-expand],[data-expand-go],[data-share],[data-sup-send]");
+  const el = e.target.closest("[data-t],[data-go],[data-pay],[data-paybal],[data-topup],[data-action],[data-pick],[data-days],[data-theme],[data-more],[data-buy],[data-pf],[data-guide],[data-step],[data-off],[data-open],[data-gday],[data-gift],[data-redeem],[data-email],[data-copy],[data-revoke],[data-devbuy],[data-devadd],[data-expand],[data-expand-go],[data-share],[data-sup-send],[data-sup-attach],[data-sup-clear],[data-adm-open],[data-adm-back],[data-tpl],[data-adm-reply],[data-adm-close]");
   if (!el) return;
   const d = el.dataset;
   if (d.theme) return setTheme(d.theme);
@@ -1097,6 +1216,13 @@ document.addEventListener("click", e => {
   if (d.email !== undefined) return saveEmail();
   if (d.copy) return copy(d.copy);
   if (d.supSend !== undefined) return sendSupport();
+  if (d.supAttach !== undefined) return $("#sup_file")?.click();
+  if (d.supClear !== undefined) { state.pendingImg = null; return renderPreview(); }
+  if (d.admOpen) { state.adminUser = +d.admOpen; return render(); }
+  if (d.admBack !== undefined) { state.adminUser = null; return render(); }
+  if (d.tpl !== undefined) { $("#adm_text").value = TEMPLATES[+d.tpl]; return; }
+  if (d.admReply !== undefined) return admSend(false);
+  if (d.admClose !== undefined) return admSend(true);
   if (d.share !== undefined) return share();
   if (d.revoke) return devRevoke(d.revoke);
   if (d.devbuy) return devBuy(d.devbuy);
@@ -1128,6 +1254,10 @@ document.addEventListener("input", e => {
 });
 
 document.addEventListener("visibilitychange", () => { if (!document.hidden && state.me) refresh(); });
+
+document.addEventListener("change", e => {
+  if (e.target.id === "sup_file") { attachImage(e.target.files[0]); e.target.value = ""; }
+});
 
 document.addEventListener("keydown", e => {
   if (e.target.id === "sup_in" && e.key === "Enter") { e.preventDefault(); sendSupport(); }

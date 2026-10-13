@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import os
 import hashlib
 import logging
 import re
@@ -12,20 +14,21 @@ from pathlib import Path
 from urllib.parse import parse_qsl
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 import db
 import payments
 import service
-from bot import open_app_kb
+from bot import notify_admin_support, open_app_kb, open_support_kb
 from vpn import vpn
 from config import (BOT_TOKEN, BOT_USERNAME, ADMIN_ID, PLANS, REFERRAL_BONUS_DAYS,
-                    SHOP, COINS_PER_PURCHASE, SUPPORT_URL, DEVICE_BASE, DEVICE_EXTRA_PRICES, DEVICE_MAX_EXTRA)
+                    SHOP, COINS_PER_PURCHASE, SUPPORT_URL, DEVICE_BASE, DEVICE_EXTRA_PRICES, DEVICE_MAX_EXTRA, DB_PATH)
 
 app = FastAPI(docs_url=None, redoc_url=None)
 HTML = Path(__file__).parent / "webapp" / "index.html"
 coin_lock = asyncio.Lock()
+_online_cache: dict = {}
 log = logging.getLogger(__name__)
 
 
@@ -390,10 +393,15 @@ async def devices(u=Depends(current_user)):
     async def _online(r):
         if not r["active"]:
             return None
+        hit = _online_cache.get(r["name"])
+        if hit and time.time() - hit[0] < 30:
+            return hit[1]
         try:
-            return await vpn.online_at(r["name"])
+            val = await vpn.online_at(r["name"])
         except Exception:
-            return None
+            val = None
+        _online_cache[r["name"]] = (time.time(), val)
+        return val
 
     onlines = await asyncio.gather(*[_online(r) for r in rows])
     out = []
@@ -564,8 +572,50 @@ async def payments_history(u=Depends(current_user)):
 
 # ---------- чат с поддержкой ----------
 
+SUPPORT_DIR = Path(os.path.dirname(os.path.abspath(DB_PATH))) / "support"
+SUPPORT_DIR.mkdir(parents=True, exist_ok=True)
+IMG_RE = re.compile(r"^data:image/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$")
+
+
+def save_image(data_url):
+    m = IMG_RE.match(data_url or "")
+    if not m:
+        raise HTTPException(400, "Неподдерживаемое изображение")
+    raw = base64.b64decode(m.group(2))
+    if len(raw) > 4_000_000:
+        raise HTTPException(400, "Изображение больше 4 МБ")
+    ext = {"jpeg": "jpg", "png": "png", "webp": "webp"}[m.group(1)]
+    name = f"{uuid.uuid4().hex}.{ext}"
+    (SUPPORT_DIR / name).write_bytes(raw)
+    return name
+
+
 class SupportIn(BaseModel):
-    text: str
+    text: str = ""
+    image: str | None = None
+
+
+@app.post("/api/support")
+async def support_send(body: SupportIn, request: Request, u=Depends(current_user)):
+    uid = u["id"]
+    text = body.text.strip()
+    if not text and not body.image:
+        raise HTTPException(400, "Напишите сообщение или прикрепите фото")
+    if len(text) > 1000:
+        raise HTTPException(400, "Сообщение слишком длинное")
+    name = save_image(body.image) if body.image else None
+    user = await db.get_user(uid)
+    nick = f"@{user['username']}" if user["username"] else (user["first_name"] or "пользователь")
+    thread = await db.get_thread(uid)
+    was_pending = bool(thread and thread["pending"])
+    await db.add_support(uid, "in", text, name)
+    await db.set_thread(uid, "open", True)
+    if not was_pending:
+        try:
+            await notify_admin_support(request.app.state.bot, uid, nick)
+        except Exception:
+            log.exception("Не удалось отправить уведомление о обращении")
+    return {"ok": True}
 
 
 @app.get("/api/support")
@@ -573,23 +623,54 @@ async def support_list(u=Depends(current_user)):
     return await db.list_support(u["id"])
 
 
-@app.post("/api/support")
-async def support_send(body: SupportIn, request: Request, u=Depends(current_user)):
+@app.get("/api/support/file/{name}")
+async def support_file(name: str, u=Depends(current_user)):
+    if not re.fullmatch(r"[a-f0-9]{32}\.(jpg|png|webp)", name):
+        raise HTTPException(404, "Не найдено")
+    owner = await db.support_file_owner(name)
+    if not owner or (owner["user_id"] != u["id"] and u["id"] != ADMIN_ID):
+        raise HTTPException(404, "Не найдено")
+    path = SUPPORT_DIR / name
+    if not path.exists():
+        raise HTTPException(404, "Не найдено")
+    return FileResponse(path)
+
+
+@app.get("/api/admin/support/threads")
+async def admin_threads(_=Depends(admin_user)):
+    return {"threads": await db.list_threads(), "pending": await db.pending_count()}
+
+
+@app.get("/api/admin/support/thread")
+async def admin_thread(user_id: int, _=Depends(admin_user)):
+    user = await db.get_user(user_id)
+    if not user:
+        raise HTTPException(404, "Пользователь не найден")
+    return {
+        "user": {"id": user_id, "name": user["first_name"], "username": user["username"]},
+        "messages": await db.list_support(user_id),
+    }
+
+
+class AdminReplyIn(BaseModel):
+    user_id: int
+    text: str
+    close: bool = False
+
+
+@app.post("/api/admin/support/reply")
+async def admin_support_reply(body: AdminReplyIn, request: Request, _=Depends(admin_user)):
     text = body.text.strip()
     if not text:
-        raise HTTPException(400, "Пустое сообщение")
-    if len(text) > 1000:
-        raise HTTPException(400, "Сообщение слишком длинное")
-    user = await db.get_user(u["id"])
-    nick = f"@{user['username']}" if user["username"] else (user["first_name"] or "пользователь")
+        raise HTTPException(400, "Пустой ответ")
+    if not await db.get_user(body.user_id):
+        raise HTTPException(404, "Пользователь не найден")
+    await db.add_support(body.user_id, "out", text)
+    await db.set_thread(body.user_id, "closed" if body.close else "open", False)
     try:
-        sent = await request.app.state.bot.send_message(
-            ADMIN_ID,
-            f"💬 Поддержка от {nick} (ID {u['id']}):\n\n{text}\n\n"
-            "Ответьте реплаем на это сообщение, чтобы ответить пользователю.",
-        )
+        await request.app.state.bot.send_message(
+            body.user_id, f"💬 Поддержка:\n\n{text}", reply_markup=open_support_kb())
     except Exception:
-        log.exception("Не удалось переслать обращение в поддержку")
-        raise HTTPException(502, "Не удалось отправить, попробуйте позже")
-    await db.add_support(u["id"], "in", text, sent.message_id)
+        log.exception("Ответ не доставлен пользователю %s", body.user_id)
+        raise HTTPException(502, "Ответ сохранён, но не доставлен: возможно, пользователь заблокировал бота")
     return {"ok": True}
