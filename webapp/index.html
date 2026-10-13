@@ -260,6 +260,8 @@ input:focus{border-color:var(--accent-edge);box-shadow:0 0 0 3px var(--focus)}
 #devslider{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer;-webkit-appearance:none;appearance:none;background:transparent;border:0}
 #devslider::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:34px;background:transparent}
 #devslider::-moz-range-thumb{width:28px;height:34px;background:transparent;border:0}
+.theming *{transition:background-color .6s var(--ease),color .6s var(--ease),border-color .6s var(--ease),box-shadow .6s var(--ease),fill .6s var(--ease) !important}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.6s;animation-timing-function:var(--ease)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -295,15 +297,31 @@ const THEMES = {
 };
 let fx = THEMES.grey.fx;
 
-function setTheme(key) {
-  if (!THEMES[key]) return;
+function applyTheme(key) {
   const t = THEMES[key];
+  const needReset = fx.mode !== t.fx.mode || fx.count !== t.fx.count || !parts.length;
   document.documentElement.dataset.theme = key;
   fx = t.fx;
-  resetBg();
-  try { localStorage.setItem("wispie-theme", key); } catch {}
+  if (needReset) resetBg();
+  else parts.forEach(p => { p.c = fx.colors[Math.floor(Math.random() * fx.colors.length)]; });
+  // на время смены темы плавно переходят цвета всех элементов
+  const root = document.documentElement;
+  root.classList.add("theming");
+  clearTimeout(root._themeTimer);
+  root._themeTimer = setTimeout(() => root.classList.remove("theming"), 700);
   try { tg?.setHeaderColor?.(t.tg); tg?.setBackgroundColor?.(t.tg); } catch {}
   document.querySelectorAll(".swcol").forEach(b => b.classList.toggle("on", b.dataset.theme === key));
+}
+
+function setTheme(key) {
+  if (!THEMES[key] || key === document.documentElement.dataset.theme) return;
+  try { localStorage.setItem("wispie-theme", key); } catch {}
+  // где поддерживается, весь экран плавно перетекает в новую тему
+  if (document.startViewTransition && !reduceMotion) {
+    document.startViewTransition(() => applyTheme(key));
+  } else {
+    applyTheme(key);
+  }
 }
 
 function themeCard() {
@@ -1033,7 +1051,7 @@ document.addEventListener("wheel", e => { if (e.ctrlKey) e.preventDefault(); }, 
 (async () => {
   let saved = null;
   try { saved = localStorage.getItem("wispie-theme"); } catch {}
-  setTheme(THEMES[saved] ? saved : "grey");
+  applyTheme(THEMES[saved] ? saved : "grey");
   try { state.me = await api("/api/me"); }
   catch (e) {
     $("#app").innerHTML = `<div class="glass" style="margin-top:30px;text-align:center"><h2 class="title">Откройте в Telegram</h2><p class="muted">${esc(e.message)}</p></div>`;
